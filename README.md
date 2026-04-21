@@ -133,6 +133,38 @@ Paleta de cores definida em `src/styles.scss` via CSS custom properties:
 
 ---
 
+## Testes
+
+O projeto usa **Karma + Jasmine** com cobertura em todas as camadas.
+
+```bash
+# Executar todos os testes (headless)
+npm test
+
+# Cobertura de código
+npm test -- --code-coverage
+# Relatório em coverage/cartolaoddsfe/index.html
+```
+
+### Cobertura por camada
+
+| Arquivo de teste | Camada | Cenários |
+|---|---|---|
+| `app.component.spec.ts` | Shell | Navbar, links, router-outlet |
+| `error.interceptor.spec.ts` | Core | Status 0, 400, 422, 502, 500, sucesso |
+| `loading-spinner.component.spec.ts` | Shared | message, fullPage, spinner DOM |
+| `alert-banner.component.spec.ts` | Shared | type, icon, classes CSS, message |
+| `time.service.spec.ts` | Service | GET /api/time, dados, erros HTTP |
+| `ranking.service.spec.ts` | Service | GET /api/ranking, params posicao/limite, erros |
+| `favoritos.service.spec.ts` | Service | GET /api/favoritos, oddLimite opcional, erros |
+| `player-card.component.spec.ts` | Component | scorePercent, captain, dúvida, substituto, valorizacao |
+| `team-view.component.spec.ts` | Component | Filtros por posição, defensores LAT-ZAG-ZAG-LAT, capitão, reserva luxo |
+| `time-page.component.spec.ts` | Page | Load, erro, métricas calculadas, avisoMercado |
+| `ranking-page.component.spec.ts` | Page | Filtros, scorePercent, erro, avisoMercado |
+| `favoritos-page.component.spec.ts` | Page | probFavorito, probEmpate, reset, cards DOM |
+
+---
+
 ## Documentação Adicional
 
 - [`docs/documentacao.md`](./docs/documentacao.md) — documentação técnica completa do frontend
