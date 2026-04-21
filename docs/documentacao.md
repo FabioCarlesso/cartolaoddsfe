@@ -478,4 +478,73 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 
 ---
 
+---
+
+## 14. Testes
+
+### Stack de Testes
+
+| Ferramenta | Versão | Uso |
+|---|---|---|
+| Karma | via `@angular-devkit/build-angular` | Test runner |
+| Jasmine | ~5.1 | Framework de asserções e spies |
+| `karma-coverage` | ~2.2 | Relatório de cobertura de código |
+| `ChromeHeadless` | — | Browser de execução (CI-friendly) |
+
+Configuração em `karma.conf.js`, referenciado no `angular.json` via `"karmaConfig": "karma.conf.js"`.
+
+### Estratégia por camada
+
+**Serviços** — usam `provideHttpClient()` + `provideHttpClientTesting()` + `HttpTestingController` para interceptar e verificar chamadas HTTP:
+
+```typescript
+const req = httpMock.expectOne('/api/time');
+expect(req.request.method).toBe('GET');
+req.flush(mockData);
+```
+
+**Componentes compartilhados e de UI** — importam o componente standalone diretamente em `TestBed.configureTestingModule({ imports: [Component] })`, verificam DOM via `fixture.nativeElement` e testam inputs/outputs.
+
+**Componentes de página** — usam `jasmine.createSpyObj` para mockar serviços, controlam retornos com `of(data)` e `throwError(...)` do RxJS:
+
+```typescript
+mockTimeService = jasmine.createSpyObj('TimeService', ['getTime']);
+mockTimeService.getTime.and.returnValue(of(mockTime));
+```
+
+**Interceptor** — usa `HttpClient` real com o interceptor registrado via `withInterceptors([errorInterceptor])` e verifica o campo `userMessage` nos erros.
+
+### Cobertura dos Testes
+
+| Arquivo de Teste | Cenários cobertos |
+|---|---|
+| `app.component.spec.ts` | Criação, navbar, links, router-outlet |
+| `error.interceptor.spec.ts` | Status 0, 400 (com e sem mensagem), 422, 502, 500, resposta de sucesso |
+| `loading-spinner.component.spec.ts` | Spinner DOM, message vazio/preenchido, classe full-page |
+| `alert-banner.component.spec.ts` | Tipos (warning/error/success/info), ícones, classes CSS, message |
+| `time.service.spec.ts` | GET /api/time, retorno correto, avisoMercado, erros |
+| `ranking.service.spec.ts` | GET com limite padrão, com/sem posicao, propagação de erro |
+| `favoritos.service.spec.ts` | GET sem oddLimite, com oddLimite, propagação de erro |
+| `player-card.component.spec.ts` | Nome, clube, posição, dúvida, capitão, luxo, substituto, scorePercent (0/50/100%), valorizacao |
+| `team-view.component.spec.ts` | Filtros por posição, ordem LAT-ZAG-ZAG-LAT, capitão, reserva de luxo, sem TEC, sem LAT |
+| `time-page.component.spec.ts` | Load no init, sucesso, erro, fallback, métricas (titularesCount, duvidaCount, totalPreco, mediaScore), null state |
+| `ranking-page.component.spec.ts` | Load, filtros, scorePercent, erro, lista de posições, avisoMercado |
+| `favoritos-page.component.spec.ts` | probFavorito, probEmpate (com/sem oddEmpate), reset, DOM cards, erro |
+
+### Comandos
+
+```bash
+# Todos os testes (ChromeHeadless)
+npm test
+
+# Com relatório de cobertura
+npm test -- --code-coverage
+# HTML em coverage/cartolaoddsfe/index.html
+
+# Manter testes em watch mode
+npm test -- --watch
+```
+
+---
+
 *Documentação gerada em 2025 — Projeto Cartola Odds Frontend.*
