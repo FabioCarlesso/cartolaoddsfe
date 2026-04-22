@@ -1,7 +1,7 @@
 # Documentação Técnica — Cartola Odds Frontend
 
-> **Stack:** Angular 17 · TypeScript 5.4 · SCSS · RxJS 7.8  
-> **Versão:** 1.0.0
+> **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8  
+> **Versão:** 1.1.0
 
 ---
 
@@ -25,7 +25,7 @@
 
 ## 1. Arquitetura
 
-O projeto segue o padrão **Feature-based com Standalone Components** do Angular 17. Não usa NgModules — cada componente declara seus próprios imports.
+O projeto segue o padrão **Feature-based com Standalone Components** do Angular 21. Não usa NgModules — cada componente declara seus próprios imports.
 
 ```
 app/
@@ -217,6 +217,14 @@ Todos usam `inject(HttpClient)` e são `providedIn: 'root'`.
 getTime(): Observable<TimeResponse>
 // GET /api/time
 ```
+
+O backend retorna `titulares` e `reservas` agrupados por posição (`{ ATA: [], MEI: [], ... }`). O service aplica mapeamento interno antes de expor o `Observable<TimeResponse>`:
+
+- `titulares`: objeto por posição → `Atleta[]` flat via `Object.values().flat()`
+- `reservas`: objeto por posição (um atleta por chave) → `Atleta[]` via `Object.values()`
+- `nomeClube` → `clube`
+- `status` (string `"⚠️ Dúvida"`) → `emDuvida` (boolean)
+- `substitutoProvavel` mapeado recursivamente
 
 ### `RankingService`
 
@@ -462,7 +470,7 @@ npm test           # Testes com Karma/Jasmine
 
 ### `angular.json` — Builder
 
-Usa o novo builder esbuild (`@angular-devkit/build-angular:application`), padrão do Angular 17:
+Usa o builder esbuild (`@angular-devkit/build-angular:application`), padrão do Angular 21:
 
 - **Output:** `dist/cartolaoddsfe/`
 - **Entry:** `src/main.ts`
@@ -522,7 +530,7 @@ mockTimeService.getTime.and.returnValue(of(mockTime));
 | `error.interceptor.spec.ts` | Status 0, 400 (com e sem mensagem), 422, 502, 500, resposta de sucesso |
 | `loading-spinner.component.spec.ts` | Spinner DOM, message vazio/preenchido, classe full-page |
 | `alert-banner.component.spec.ts` | Tipos (warning/error/success/info), ícones, classes CSS, message |
-| `time.service.spec.ts` | GET /api/time, retorno correto, avisoMercado, erros |
+| `time.service.spec.ts` | GET /api/time, mapeamento agrupado→flat, nomeClube→clube, status→emDuvida, substituto recursivo, avisoMercado, erros |
 | `ranking.service.spec.ts` | GET com limite padrão, com/sem posicao, propagação de erro |
 | `favoritos.service.spec.ts` | GET sem oddLimite, com oddLimite, propagação de erro |
 | `player-card.component.spec.ts` | Nome, clube, posição, dúvida, capitão, luxo, substituto, scorePercent (0/50/100%), valorizacao |
@@ -547,4 +555,4 @@ npm test -- --watch
 
 ---
 
-*Documentação gerada em 2025 — Projeto Cartola Odds Frontend.*
+*Documentação atualizada em 2026 — Projeto Cartola Odds Frontend.*

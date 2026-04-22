@@ -7,7 +7,7 @@
 
 ## O que é este projeto
 
-Frontend Angular 17 que consome a **Cartola Odds API** (backend Java/Spring Boot) e apresenta dados estratégicos para jogadores do Cartola FC (fantasy football brasileiro).
+Frontend Angular 21 que consome a **Cartola Odds API** (backend Java/Spring Boot) e apresenta dados estratégicos para jogadores do Cartola FC (fantasy football brasileiro).
 
 O usuário final quer montar o melhor time possível cruzando:
 - Métricas dos atletas (média de pontos, variação, preço)
@@ -41,8 +41,8 @@ O usuário final quer montar o melhor time possível cruzando:
 
 | Item | Detalhe |
 |---|---|
-| Framework | Angular 17.3 — **standalone components** (sem NgModules) |
-| Linguagem | TypeScript 5.4 com `strict: true` |
+| Framework | Angular 21.2 — **standalone components** (sem NgModules) |
+| Linguagem | TypeScript 5.9 com `strict: true` |
 | Estilo | SCSS puro (sem frameworks CSS externos) |
 | HTTP | `HttpClient` com interceptor funcional |
 | Forms | `ReactiveFormsModule` não usado — apenas `FormsModule` para dois filtros simples |
@@ -194,6 +194,26 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 
 ---
 
+## Mapeamento da API — TimeService
+
+O backend retorna `titulares` e `reservas` agrupados por posição:
+
+```json
+{
+  "titulares": { "ATA": [...], "MEI": [...], "ZAG": [...] },
+  "reservas":  { "ATA": {...}, "MEI": {...} }
+}
+```
+
+O `TimeService` transforma isso para arrays planos antes de emitir o `Observable<TimeResponse>`:
+- `nomeClube` → `clube`
+- `status` (string `"⚠️ Dúvida"`) → `emDuvida` (boolean)
+- `substitutoProvavel` mapeado recursivamente
+
+Os models (`Atleta`, `TimeResponse`) e todos os templates trabalham com o formato já mapeado — sem acesso ao formato raw.
+
+---
+
 ## Próximas Melhorias Previstas
 
 - [ ] Dark/light mode toggle
@@ -202,5 +222,4 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 - [ ] Histórico de rodadas
 - [ ] Filtro de budget máximo (C$) na tela de Time
 - [ ] PWA / Service Worker para cache offline
-- [ ] Testes unitários dos services e components
 - [ ] NgRx Signals para estado global (quando a complexidade justificar)

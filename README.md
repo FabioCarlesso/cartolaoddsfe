@@ -18,11 +18,11 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 
 | Tecnologia | Versão | Uso |
 |---|---|---|
-| Angular | 17.3 | Framework principal (standalone components) |
-| TypeScript | 5.4 | Linguagem |
+| Angular | 21.2 | Framework principal (standalone components) |
+| TypeScript | 5.9 | Linguagem |
 | RxJS | 7.8 | Gerenciamento de fluxos assíncronos |
-| Angular Router | 17.3 | Roteamento com lazy loading |
-| Angular HttpClient | 17.3 | Comunicação HTTP com o backend |
+| Angular Router | 21.2 | Roteamento com lazy loading |
+| Angular HttpClient | 21.2 | Comunicação HTTP com o backend |
 | SCSS | — | Estilização com CSS custom properties |
 
 ---

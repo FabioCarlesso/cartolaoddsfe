@@ -1,5 +1,5 @@
 import { TestBed, ComponentFixture, fakeAsync, tick } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { TimePageComponent } from './time-page.component';
 import { TimeService } from '../../services/time.service';
 import { TimeResponse } from '../../../../shared/models/time.model';
@@ -81,7 +81,7 @@ describe('TimePageComponent', () => {
 
   it('should set loading to true while loading', fakeAsync(() => {
     mockTimeService.getTime.and.returnValue(
-      new (require('rxjs').Observable)((observer: any) => setTimeout(() => observer.next(mockTime), 100))
+      new Observable((observer: any) => { setTimeout(() => observer.next(mockTime), 100); })
     );
     component.load();
     expect(component.loading).toBeTrue();
