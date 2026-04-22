@@ -7,10 +7,9 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
 
 @Component({
-  selector: 'app-favoritos-page',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent],
-  template: `
+    selector: 'app-favoritos-page',
+    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent],
+    template: `
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">&#11088; Favoritos por Odds</h1>
@@ -154,7 +153,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .filters-bar {
       background: var(--bg-card);
       border: 1px solid var(--border);

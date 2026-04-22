@@ -8,16 +8,15 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
 
 @Component({
-  selector: 'app-time-page',
-  standalone: true,
-  imports: [
-    DecimalPipe,
-    TeamViewComponent,
-    PlayerCardComponent,
-    LoadingSpinnerComponent,
-    AlertBannerComponent
-  ],
-  template: `
+    selector: 'app-time-page',
+    imports: [
+        DecimalPipe,
+        TeamViewComponent,
+        PlayerCardComponent,
+        LoadingSpinnerComponent,
+        AlertBannerComponent
+    ],
+    template: `
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">&#9917; Time da Rodada</h1>
@@ -128,7 +127,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .header-actions {
       display: flex;
       align-items: center;

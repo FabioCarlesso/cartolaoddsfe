@@ -3,10 +3,9 @@ import { DecimalPipe } from '@angular/common';
 import { Atleta } from '../../../../shared/models/atleta.model';
 
 @Component({
-  selector: 'app-player-card',
-  standalone: true,
-  imports: [DecimalPipe],
-  template: `
+    selector: 'app-player-card',
+    imports: [DecimalPipe],
+    template: `
     <div class="player-card"
          [class.is-doubt]="atleta.emDuvida"
          [class.is-captain]="isCaptain"
@@ -68,7 +67,7 @@ import { Atleta } from '../../../../shared/models/atleta.model';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .player-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
