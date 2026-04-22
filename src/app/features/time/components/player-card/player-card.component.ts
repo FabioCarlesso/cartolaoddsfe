@@ -42,7 +42,7 @@ import { Atleta } from '../../../../shared/models/atleta.model';
         </div>
         <div class="stat">
           <span class="stat-label">Preço</span>
-          <span class="stat-value">C${{ atleta.preco | number:'1.0-0' }}</span>
+          <span class="stat-value">C\${{ atleta.preco | number:'1.0-0' }}</span>
         </div>
         <div class="stat">
           <span class="stat-label">Score</span>
