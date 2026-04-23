@@ -1,7 +1,7 @@
 # Documentação Técnica — Cartola Odds Frontend
 
-> **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8  
-> **Versão:** 1.1.0
+> **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8 · Docker · nginx  
+> **Versão:** 1.2.0
 
 ---
 
@@ -20,6 +20,8 @@
 11. [Design System](#11-design-system)
 12. [Proxy de Desenvolvimento](#12-proxy-de-desenvolvimento)
 13. [Build e Deploy](#13-build-e-deploy)
+14. [Docker](#14-docker)
+15. [Testes](#15-testes)
 
 ---
 
@@ -486,9 +488,106 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 
 ---
 
+## 14. Docker
+
+### Arquivos
+
+| Arquivo | Descrição |
+|---|---|
+| `Dockerfile` | Build multi-stage: Node 20 Alpine (build) + nginx 1.27 Alpine (runtime) |
+| `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` |
+| `docker-compose.yml` | Orquestração com healthcheck e resource limits |
+| `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
+| `.dockerignore` | Exclui `node_modules/`, `dist/`, specs e docs do contexto |
+
+### Dockerfile — Multi-stage Build
+
+```
+Stage 1 — build (node:20-alpine)
+  └── npm ci --legacy-peer-deps
+  └── npm run build
+        └── gera dist/cartolaoddsfe/browser/
+
+Stage 2 — runtime (nginx:1.27-alpine)
+  └── COPY nginx.conf.template
+  └── COPY --from=build dist/cartolaoddsfe/browser → /usr/share/nginx/html
+  └── USER appuser (não-root)
+  └── EXPOSE 80
+  └── CMD: envsubst + nginx
+```
+
+**Decisões de design:**
+- **Alpine** — imagem base mínima (~25 MB na runtime vs ~300 MB com Node)
+- **Usuário não-root** — `appuser` criado no estágio runtime, boa prática para produção
+- **`envsubst`** — `BACKEND_URL` substituído no template em tempo de inicialização do container, sem rebuild de imagem
+- **Multi-stage** — Node.js não existe na imagem final, reduz superfície de ataque
+
+### nginx.conf.template
+
+Configurações habilitadas:
+
+| Recurso | Detalhe |
+|---|---|
+| SPA routing | `try_files $uri $uri/ /index.html` — suporta client-side routing |
+| Proxy `/api/` | Proxia para `${BACKEND_URL}/api/` — sem CORS em produção |
+| Cache de assets | `Cache-Control: public, immutable` por 1 ano para JS/CSS/fontes |
+| Gzip | Compressão habilitada para `text/*`, `application/json`, `application/javascript` |
+| Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy` |
+
+### Variáveis de Ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `APP_PORT` | `4200` | Porta exposta no host |
+
+### Comandos
+
+```bash
+# Início rápido
+cp .env.example .env            # 1. copiar template
+# editar .env se necessário      # 2. ajustar BACKEND_URL
+docker compose up -d            # 3. subir container
+
+# Rebuild após mudança de código
+docker compose up -d --build
+
+# Logs
+docker compose logs -f frontend
+
+# Status e healthcheck
+docker compose ps
+
+# Parar
+docker compose down
+
+# Build manual
+docker build -t cartola-odds-frontend:1.0.0 .
+
+# Executar sem Compose
+docker run -p 4200:80 \
+  -e BACKEND_URL=http://localhost:8080 \
+  cartola-odds-frontend:1.0.0
+```
+
+### Resource Limits (docker-compose.yml)
+
+```yaml
+deploy:
+  resources:
+    limits:
+      memory: 128m
+      cpus: "0.5"
+    reservations:
+      memory: 64m
+      cpus: "0.1"
+```
+
+O container nginx consome muito menos recursos que o backend Java — 128 MB é suficiente para tráfego de desenvolvimento e uso moderado em produção.
+
 ---
 
-## 14. Testes
+## 15. Testes
 
 ### Stack de Testes
 
