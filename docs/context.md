@@ -240,6 +240,16 @@ Os models (`Atleta`, `TimeResponse`) e todos os templates trabalham com o format
 - Build output esperado pelo Dockerfile: `dist/cartolaoddsfe/browser/` (path do Angular 21 com esbuild).
 - Container roda como usuário não-root (`appuser`) por segurança.
 
+### Acesso ao backend em localhost:8080
+
+O container não pode usar `localhost` para atingir o host — `localhost` dentro do container é o próprio container.
+
+A solução é `host.docker.internal`, que resolve para o IP do host:
+- **Docker Desktop (Mac/Windows):** funciona automaticamente.
+- **Linux:** requer `extra_hosts: ["host.docker.internal:host-gateway"]` no `docker-compose.yml` — já incluído.
+
+Se o backend estiver em `localhost:8080` no host, **nenhuma configuração adicional** é necessária — o padrão `BACKEND_URL=http://host.docker.internal:8080` já resolve corretamente.
+
 ### O que NÃO fazer em Docker
 
 - Não hardcode a URL do backend na imagem — usar `BACKEND_URL` via variável de ambiente

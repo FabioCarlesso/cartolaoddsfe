@@ -96,9 +96,10 @@ docker compose ps                # Verificar status e healthcheck
 # Build manual da imagem
 docker build -t cartola-odds-frontend:1.0.0 .
 
-# Executar sem Compose
+# Executar sem Compose (Linux: --add-host para resolver host.docker.internal)
 docker run -p 4200:80 \
-  -e BACKEND_URL=http://localhost:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -e BACKEND_URL=http://host.docker.internal:8080 \
   cartola-odds-frontend:1.0.0
 ```
 
@@ -112,12 +113,22 @@ docker run -p 4200:80 \
 | `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
 | `.dockerignore` | Exclui `node_modules/`, `dist/`, specs e docs do contexto |
 
+### Acesso ao backend em localhost
+
+O container não pode usar `localhost` para atingir o host. A solução é `host.docker.internal`:
+
+- **Docker Desktop (Mac/Windows):** resolve automaticamente.
+- **Linux:** o `docker-compose.yml` já inclui `extra_hosts: ["host.docker.internal:host-gateway"]`, que mapeia o nome para o IP do host — nenhuma configuração extra é necessária.
+
+Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docker.internal:8080` funciona em qualquer plataforma.
+
 ### Decisões de design
 
 - **Multi-stage build** — imagem final usa apenas nginx alpine (~25 MB vs ~300 MB com Node)
 - **Usuário não-root** — container roda como `appuser` por segurança
 - **`envsubst`** — `BACKEND_URL` substituído em runtime no `nginx.conf.template`
 - **Proxy nginx** — `/api/*` proxiado para o backend; sem CORS em produção
+- **`extra_hosts`** — `host.docker.internal` mapeado para o host em Linux via `host-gateway`
 - **Cache de assets** — JS/CSS/fontes com `Cache-Control: public, immutable, 1y`
 - **Gzip** — compressão habilitada para todos os tipos de texto
 
