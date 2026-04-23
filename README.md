@@ -29,13 +29,16 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 
 ## Pré-requisitos
 
-- Node.js 18+
-- npm 9+
+- Node.js 20+
+- npm 10+
 - Backend **Cartola Odds API** rodando em `http://localhost:8080`
+- Docker + Docker Compose *(para execução containerizada)*
 
 ---
 
 ## Como Executar
+
+### Desenvolvimento local
 
 ```bash
 # 1. Instalar dependências
@@ -54,8 +57,69 @@ open http://localhost:4200
 
 ```bash
 npm run build
-# Artefatos em dist/cartolaoddsfe/
+# Artefatos em dist/cartolaoddsfe/browser/
 ```
+
+---
+
+## Docker
+
+### Início rápido
+
+```bash
+# 1. Copiar e configurar variáveis de ambiente
+cp .env.example .env
+
+# 2. Subir o container
+docker compose up -d
+
+# 3. Acessar
+open http://localhost:4200
+```
+
+### Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `APP_PORT` | `4200` | Porta exposta no host |
+
+### Comandos úteis
+
+```bash
+docker compose up -d             # Subir em background
+docker compose up -d --build     # Rebuild após mudança de código
+docker compose logs -f frontend  # Ver logs em tempo real
+docker compose down              # Parar e remover containers
+docker compose ps                # Verificar status e healthcheck
+
+# Build manual da imagem
+docker build -t cartola-odds-frontend:1.0.0 .
+
+# Executar sem Compose
+docker run -p 4200:80 \
+  -e BACKEND_URL=http://localhost:8080 \
+  cartola-odds-frontend:1.0.0
+```
+
+### Arquivos Docker
+
+| Arquivo | Descrição |
+|---|---|
+| `Dockerfile` | Build multi-stage: Node 20 (build) + nginx 1.27 (runtime) |
+| `nginx.conf.template` | Config nginx com proxy `/api` e headers de segurança |
+| `docker-compose.yml` | Orquestração com healthcheck e resource limits |
+| `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
+| `.dockerignore` | Exclui `node_modules/`, `dist/`, specs e docs do contexto |
+
+### Decisões de design
+
+- **Multi-stage build** — imagem final usa apenas nginx alpine (~25 MB vs ~300 MB com Node)
+- **Usuário não-root** — container roda como `appuser` por segurança
+- **`envsubst`** — `BACKEND_URL` substituído em runtime no `nginx.conf.template`
+- **Proxy nginx** — `/api/*` proxiado para o backend; sem CORS em produção
+- **Cache de assets** — JS/CSS/fontes com `Cache-Control: public, immutable, 1y`
+- **Gzip** — compressão habilitada para todos os tipos de texto
 
 ---
 

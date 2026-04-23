@@ -214,6 +214,40 @@ Os models (`Atleta`, `TimeResponse`) e todos os templates trabalham com o format
 
 ---
 
+## Docker e Containerização
+
+### Arquivos Docker
+
+| Arquivo | Papel |
+|---|---|
+| `Dockerfile` | Build multi-stage: Node 20 Alpine (build) → nginx 1.27 Alpine (runtime) |
+| `nginx.conf.template` | Config nginx com `envsubst` — proxy `/api/`, SPA routing, gzip, cache 1 ano |
+| `docker-compose.yml` | Serviço `frontend` com healthcheck e resource limits |
+| `.env.example` | Template de variáveis de ambiente — copiar para `.env` antes de usar |
+| `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs, docs do contexto de build |
+
+### Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `APP_PORT` | `4200` | Porta exposta no host |
+
+### Como funciona
+
+- O CMD do container executa `envsubst` para substituir `${BACKEND_URL}` no `nginx.conf.template` antes de iniciar o nginx — sem rebuild da imagem para trocar de backend.
+- `nginx` faz proxy de `/api/` para `${BACKEND_URL}/api/`, eliminando CORS em produção (mesmo comportamento do `proxy.conf.json` em dev).
+- Build output esperado pelo Dockerfile: `dist/cartolaoddsfe/browser/` (path do Angular 21 com esbuild).
+- Container roda como usuário não-root (`appuser`) por segurança.
+
+### O que NÃO fazer em Docker
+
+- Não hardcode a URL do backend na imagem — usar `BACKEND_URL` via variável de ambiente
+- Não expor porta 8080 no container de frontend — nginx escuta na 80 internamente
+- Não editar `nginx.conf.template` sem testar o `envsubst` manualmente
+
+---
+
 ## Próximas Melhorias Previstas
 
 - [ ] Dark/light mode toggle
