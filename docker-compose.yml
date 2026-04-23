@@ -1,0 +1,37 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cartola-odds-frontend
+    image: cartola-odds-frontend:latest
+    ports:
+      - "${APP_PORT:-4200}:80"
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8080}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"
+        reservations:
+          memory: 64m
+          cpus: "0.1"
+
+# Para rodar backend e frontend juntos, adicione o serviço do backend aqui:
+#
+#  backend:
+#    image: cartola-odds:1.0.0        # imagem gerada pelo projeto cartolaodds
+#    container_name: cartola-odds-api
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      ODDS_API_KEY: ${ODDS_API_KEY}
+#    restart: unless-stopped

@@ -1,0 +1,41 @@
+# Dependências
+node_modules/
+
+# Build output
+dist/
+.angular/
+
+# Testes e cobertura
+coverage/
+
+# Ambiente e segredos
+.env
+*.env.local
+
+# Documentação (não vai para imagem)
+docs/
+*.md
+
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Arquivos de desenvolvimento
+*.spec.ts
+karma.conf.js
+
+# Git
+.git/
+.gitignore

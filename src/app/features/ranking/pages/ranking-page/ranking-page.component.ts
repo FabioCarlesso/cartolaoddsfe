@@ -13,10 +13,9 @@ interface PosicaoOption {
 }
 
 @Component({
-  selector: 'app-ranking-page',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent],
-  template: `
+    selector: 'app-ranking-page',
+    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent],
+    template: `
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">&#127942; Ranking de Atletas</h1>
@@ -146,7 +145,7 @@ interface PosicaoOption {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .rodada-badge {
       display: inline-flex;
       align-items: center;

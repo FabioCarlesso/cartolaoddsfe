@@ -4,10 +4,9 @@ import { TimeResponse } from '../../../../shared/models/time.model';
 import { PlayerCardComponent } from '../player-card/player-card.component';
 
 @Component({
-  selector: 'app-team-view',
-  standalone: true,
-  imports: [PlayerCardComponent],
-  template: `
+    selector: 'app-team-view',
+    imports: [PlayerCardComponent],
+    template: `
     <div class="formation-wrapper">
       <div class="pitch">
         <div class="pitch-lines">
@@ -75,7 +74,7 @@ import { PlayerCardComponent } from '../player-card/player-card.component';
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .formation-wrapper {
       display: flex;
       flex-direction: column;
