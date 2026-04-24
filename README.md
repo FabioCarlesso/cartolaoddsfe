@@ -11,6 +11,7 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 - **Time ideal da rodada** em formação 4-3-3 visual
 - **Ranking de atletas** por score ponderado com filtros por posição
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
+- **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
 
 ---
 
@@ -141,6 +142,7 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/time` | Time ideal com formação 4-3-3 |
 | `/ranking` | Ranking de atletas com filtros |
 | `/favoritos` | Análise de odds e favoritos |
+| `/admin` | Configurações de negócio e gerenciamento de cache |
 
 ---
 
@@ -173,9 +175,14 @@ src/
         ├── ranking/
         │   ├── services/ranking.service.ts
         │   └── pages/ranking-page/  # Tabela com filtros
-        └── favoritos/
-            ├── services/favoritos.service.ts
-            └── pages/favoritos-page/ # Cards de partidas + probabilidades
+        ├── favoritos/
+        │   ├── services/favoritos.service.ts
+        │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
+        └── admin/
+            ├── services/
+            │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
+            │   └── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
+            └── pages/admin-page/            # Formulário de config + painel de cache
 ```
 
 ---
@@ -189,6 +196,8 @@ Todos os serviços apontam para `/api` (proxiado para `localhost:8080/api` em de
 | `TimeService` | `GET /api/time` |
 | `RankingService` | `GET /api/ranking?posicao=X&limite=N` |
 | `FavoritosService` | `GET /api/favoritos?oddLimite=X` |
+| `ConfiguracaoService` | `GET /api/config`, `PATCH /api/config`, `POST /api/config/reset` |
+| `CacheService` | `DELETE /api/cache`, `DELETE /api/cache/{nome}` |
 
 ---
 
@@ -237,6 +246,9 @@ npm test -- --code-coverage
 | `time-page.component.spec.ts` | Page | Load, erro, métricas calculadas, avisoMercado |
 | `ranking-page.component.spec.ts` | Page | Filtros, scorePercent, erro, avisoMercado |
 | `favoritos-page.component.spec.ts` | Page | probFavorito, probEmpate, reset, cards DOM |
+| `configuracao.service.spec.ts` | Service | GET /api/config, PATCH, POST reset, erros |
+| `cache.service.spec.ts` | Service | DELETE /api/cache, DELETE /{nome}, erro 400 |
+| `admin-page.component.spec.ts` | Page | Load config, salvar, resetar, cache, validação pesos |
 
 ---
 
