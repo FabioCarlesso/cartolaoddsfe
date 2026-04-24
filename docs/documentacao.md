@@ -1,7 +1,7 @@
 # Documentação Técnica — Cartola Odds Frontend
 
 > **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8 · Docker · nginx  
-> **Versão:** 1.2.0
+> **Versão:** 1.3.0
 
 ---
 
@@ -17,11 +17,12 @@
 8. [Feature: Time](#8-feature-time)
 9. [Feature: Ranking](#9-feature-ranking)
 10. [Feature: Favoritos](#10-feature-favoritos)
-11. [Design System](#11-design-system)
-12. [Proxy de Desenvolvimento](#12-proxy-de-desenvolvimento)
-13. [Build e Deploy](#13-build-e-deploy)
-14. [Docker](#14-docker)
-15. [Testes](#15-testes)
+11. [Feature: Admin (Config + Cache)](#11-feature-admin-config--cache)
+12. [Design System](#12-design-system)
+13. [Proxy de Desenvolvimento](#13-proxy-de-desenvolvimento)
+14. [Build e Deploy](#14-build-e-deploy)
+15. [Docker](#15-docker)
+16. [Testes](#16-testes)
 
 ---
 
@@ -36,7 +37,8 @@ app/
 └── features/       # Domínios de negócio isolados
     ├── time/
     ├── ranking/
-    └── favoritos/
+    ├── favoritos/
+    └── admin/      # Configurações e gerenciamento de cache
 ```
 
 ### Decisões de Arquitetura
@@ -104,6 +106,7 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 | `/time` | `TimePageComponent` |
 | `/ranking` | `RankingPageComponent` |
 | `/favoritos` | `FavoritosPageComponent` |
+| `/admin` | `AdminPageComponent` |
 | `**` | Redireciona para `/time` |
 
 ---
@@ -243,6 +246,31 @@ getFavoritos(oddLimite?: number): Observable<FavoritosResponse>
 ```
 
 Quando `oddLimite` é `undefined`, o parâmetro não é enviado e o backend usa o valor padrão configurado em `application.properties`.
+
+### `ConfiguracaoService`
+
+```typescript
+getConfig(): Observable<ConfiguracaoResponse>
+// GET /api/config
+
+patchConfig(request: ConfiguracaoRequest): Observable<ConfiguracaoResponse>
+// PATCH /api/config
+
+resetConfig(): Observable<ConfiguracaoResponse>
+// POST /api/config/reset
+```
+
+### `CacheService`
+
+```typescript
+invalidateAll(): Observable<CacheResponse>
+// DELETE /api/cache
+
+invalidateByName(nome: string): Observable<CacheResponse>
+// DELETE /api/cache/{nome}
+```
+
+Caches disponíveis: `odds`, `atletas`, `clubes`, `partidas`, `pontuados`, `statusMercado`.
 
 ---
 
@@ -397,7 +425,98 @@ probEmpate(jogo: JogoFavorito): number {
 
 ---
 
-## 11. Design System
+## 11. Feature: Admin (Config + Cache)
+
+### Estrutura
+
+```
+features/admin/
+├── services/
+│   ├── configuracao.service.ts    # GET/PATCH /api/config, POST /api/config/reset
+│   └── cache.service.ts           # DELETE /api/cache, DELETE /api/cache/{nome}
+└── pages/admin-page/
+    └── admin-page.component.ts    # Tela unificada de configuração e cache
+```
+
+### `AdminPageComponent`
+
+Tela unificada com duas seções:
+
+#### Seção: Parâmetros de Negócio
+
+Exibe o formulário com todos os campos da configuração carregados do banco via `GET /api/config`. O formulário é sincronizado com `syncForm()` a cada resposta do backend.
+
+| Campo | Tipo | Validação |
+|---|---|---|
+| `oddLimite` | `number` | > 1.0 |
+| `pesoMediaPontos` | `number` | 0.0 – 1.0 |
+| `pesoValorizacao` | `number` | 0.0 – 1.0 |
+| `pesoDesempenho` | `number` | 0.0 – 1.0 |
+| `pesoFatorCasa` | `number` | 0.0 – 1.0 |
+| `pesoTimeFavorito` | `number` | 0.0 – 1.0 |
+| `formacaoGol` | `number` | >= 1 |
+| `formacaoLat` | `number` | >= 1 |
+| `formacaoZag` | `number` | >= 1 |
+| `formacaoMei` | `number` | >= 1 |
+| `formacaoAta` | `number` | >= 1 |
+| `formacaoTec` | `number` | >= 1 |
+
+**Soma dos pesos calculada em tempo real:**
+```typescript
+get somasPesos(): number {
+  return (pesoMediaPontos + pesoValorizacao + pesoDesempenho + pesoFatorCasa + pesoTimeFavorito);
+}
+get pesosValidos(): boolean {
+  return Math.abs(this.somasPesos - 1.0) <= 0.01;
+}
+```
+
+Ações:
+- **Salvar Alterações** — envia `PATCH /api/config` com todos os campos do formulário.
+- **Restaurar Defaults** — envia `POST /api/config/reset`.
+
+#### Seção: Gerenciar Cache
+
+Lista os 6 caches disponíveis (`odds`, `atletas`, `clubes`, `partidas`, `pontuados`, `statusMercado`) mais um botão para invalidar todos de uma vez.
+
+| Ação | Endpoint |
+|---|---|
+| Invalidar Todos | `DELETE /api/cache` |
+| Invalidar cache específico | `DELETE /api/cache/{nome}` |
+
+**Estado de loading por cache:** `cacheLoading` recebe `'all'` ou o nome do cache em operação, permitindo desabilitar apenas o botão correto.
+
+### Modelos
+
+**`ConfiguracaoResponse`** — retornado por `GET /api/config`, `PATCH /api/config` e `POST /api/config/reset`:
+```typescript
+interface ConfiguracaoResponse {
+  oddLimite: number;
+  pesoMediaPontos: number; pesoValorizacao: number;
+  pesoDesempenho: number; pesoFatorCasa: number; pesoTimeFavorito: number;
+  formacaoGol: number; formacaoLat: number; formacaoZag: number;
+  formacaoMei: number; formacaoAta: number; formacaoTec: number;
+  updatedAt: string;
+}
+```
+
+**`ConfiguracaoRequest`** — body do `PATCH /api/config` (todos os campos opcionais):
+```typescript
+interface ConfiguracaoRequest { oddLimite?: number; /* ... mesmos campos ... */ }
+```
+
+**`CacheResponse`** — retornado por `DELETE /api/cache` e `DELETE /api/cache/{nome}`:
+```typescript
+interface CacheResponse {
+  cachesInvalidados: string[];
+  mensagem: string;
+  timestamp: string;
+}
+```
+
+---
+
+## 12. Design System  
 
 Definido em `src/styles.scss` via CSS custom properties:
 
@@ -442,7 +561,7 @@ Definido em `src/styles.scss` via CSS custom properties:
 
 ---
 
-## 12. Proxy de Desenvolvimento
+## 13. Proxy de Desenvolvimento
 
 Arquivo: `proxy.conf.json`
 
@@ -460,7 +579,7 @@ Ativo automaticamente com `npm start` (`ng serve --proxy-config proxy.conf.json`
 
 ---
 
-## 13. Build e Deploy
+## 14. Build e Deploy
 
 ### Comandos
 
@@ -488,7 +607,7 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 
 ---
 
-## 14. Docker
+## 15. Docker
 
 ### Arquivos
 
@@ -587,7 +706,7 @@ O container nginx consome muito menos recursos que o backend Java — 128 MB é 
 
 ---
 
-## 15. Testes
+## 16. Testes
 
 ### Stack de Testes
 
@@ -637,6 +756,9 @@ mockTimeService.getTime.and.returnValue(of(mockTime));
 | `time-page.component.spec.ts` | Load no init, sucesso, erro, fallback, métricas (titularesCount, duvidaCount, totalPreco, mediaScore), null state |
 | `ranking-page.component.spec.ts` | Load, filtros, scorePercent, erro, lista de posições, avisoMercado |
 | `favoritos-page.component.spec.ts` | probFavorito, probEmpate (com/sem oddEmpate), reset, DOM cards, erro |
+| `configuracao.service.spec.ts` | GET /api/config, PATCH com body, POST /api/config/reset, erros HTTP |
+| `cache.service.spec.ts` | DELETE /api/cache (todos), DELETE /api/cache/{nome}, erro 400 nome inválido |
+| `admin-page.component.spec.ts` | Load config, sync form, salvar, resetar, invalidarTodos, invalidarCache, somasPesos, pesosValidos, erros |
 
 ### Comandos
 

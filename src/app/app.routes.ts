@@ -28,6 +28,13 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'admin',
+    loadComponent: () =>
+      import('./features/admin/pages/admin-page/admin-page.component').then(
+        (m) => m.AdminPageComponent
+      )
+  },
+  {
     path: '**',
     redirectTo: 'time'
   }
