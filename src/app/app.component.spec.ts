@@ -26,7 +26,7 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const links = fixture.nativeElement.querySelectorAll('.nav-links a');
-    expect(links.length).toBe(3);
+    expect(links.length).toBe(4);
   });
 
   it('should render brand name', () => {

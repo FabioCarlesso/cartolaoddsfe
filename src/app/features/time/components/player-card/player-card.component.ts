@@ -1,6 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Atleta } from '../../../../shared/models/atleta.model';
+import { getScoreCriteriaLabel, getScoreDescription, getScorePercent } from '../../../../shared/utils/score-info.util';
 
 @Component({
     selector: 'app-player-card',
@@ -51,6 +52,10 @@ import { Atleta } from '../../../../shared/models/atleta.model';
 
       <div class="score-track">
         <div class="score-progress" [style.width.%]="scorePercent"></div>
+      </div>
+
+      <div class="score-context" [title]="scoreDescription ?? scoreCriteriaLabel">
+        {{ scoreCriteriaLabel }}
       </div>
 
       @if (atleta.valorizacao !== 0) {
@@ -223,7 +228,7 @@ import { Atleta } from '../../../../shared/models/atleta.model';
       background: rgba(255,255,255,0.08);
       border-radius: 9999px;
       overflow: hidden;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
     }
 
     .score-progress {
@@ -234,11 +239,21 @@ import { Atleta } from '../../../../shared/models/atleta.model';
     }
 
     .valorizacao {
+      margin-top: 0.45rem;
       font-size: 0.72rem;
       font-weight: 600;
 
       &.pos { color: #4ade80; }
       &.neg { color: #f87171; }
+    }
+
+    .score-context {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      line-height: 1.2;
     }
 
     .sub-row {
@@ -263,6 +278,14 @@ export class PlayerCardComponent {
   @Input() isReserve = false;
 
   get scorePercent(): number {
-    return Math.min((this.atleta.score / 12) * 100, 100);
+    return getScorePercent(this.atleta.score);
+  }
+
+  get scoreCriteriaLabel(): string {
+    return getScoreCriteriaLabel(this.atleta);
+  }
+
+  get scoreDescription(): string | null {
+    return getScoreDescription(this.atleta);
   }
 }

@@ -12,6 +12,8 @@ const rawAtleta = {
   valorizacao: 1.2,
   preco: 15.0,
   score: 8.3,
+  criterioScore: 'Atacante ofensivo',
+  descricaoScore: 'Prioriza gols e assistências.',
   status: 'Provável',
   substitutoProvavel: null
 };
@@ -25,6 +27,7 @@ const rawAtletaDuvida = {
   valorizacao: 0.0,
   preco: 8.84,
   score: 6.62,
+  scoreCriterio: 'Critério defensivo da posição',
   status: '⚠️ Dúvida',
   substitutoProvavel: {
     apelido: 'Alexander',
@@ -35,6 +38,7 @@ const rawAtletaDuvida = {
     valorizacao: 0.21,
     preco: 10.83,
     score: 5.23,
+    tipoScore: 'Fallback padrão',
     status: 'Provável',
     substitutoProvavel: null
   }
@@ -112,6 +116,19 @@ describe('TimeService', () => {
   it('should map nomeClube to clube', (done) => {
     service.getTime().subscribe((data) => {
       expect(data.titulares[0].clube).toBe('Flamengo');
+      done();
+    });
+    httpMock.expectOne('/api/time').flush(rawApiResponse);
+  });
+
+  it('should preserve optional score metadata from API', (done) => {
+    service.getTime().subscribe((data) => {
+      const gabigol = data.titulares.find(a => a.apelido === 'Gabigol')!;
+      const duvida = data.titulares.find(a => a.apelido === 'João Pedro')!;
+      expect(gabigol.criterioScore).toBe('Atacante ofensivo');
+      expect(gabigol.descricaoScore).toBe('Prioriza gols e assistências.');
+      expect(duvida.scoreCriterio).toBe('Critério defensivo da posição');
+      expect(duvida.substitutoProvavel!.tipoScore).toBe('Fallback padrão');
       done();
     });
     httpMock.expectOne('/api/time').flush(rawApiResponse);

@@ -6,6 +6,7 @@ import { Atleta } from '../../../../shared/models/atleta.model';
 import { RankingService } from '../../services/ranking.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
+import { getScoreCriteriaLabel, getScoreDescription, getScorePercent } from '../../../../shared/utils/score-info.util';
 
 interface PosicaoOption {
   value: string;
@@ -64,10 +65,13 @@ interface PosicaoOption {
         }
 
         <div class="results-header">
-          <span class="results-count">{{ data.atletas.length }} atletas</span>
-          @if (posicaoSelecionada) {
-            <span class="results-filter">Filtrando por: <strong>{{ posicaoSelecionada }}</strong></span>
-          }
+          <div class="results-summary">
+            <span class="results-count">{{ data.atletas.length }} atletas</span>
+            @if (posicaoSelecionada) {
+              <span class="results-filter">Filtrando por: <strong>{{ posicaoSelecionada }}</strong></span>
+            }
+          </div>
+          <span class="score-context">{{ scoreContextMessage }}</span>
         </div>
 
         <div class="ranking-table-wrap">
@@ -112,6 +116,9 @@ interface PosicaoOption {
                   <td class="td-score">
                     <div class="score-cell">
                       <span class="score-num">{{ atleta.score | number:'1.1-1' }}</span>
+                      <span class="score-criterion" [title]="scoreDescription(atleta) ?? scoreCriteriaLabel(atleta)">
+                        {{ scoreCriteriaLabel(atleta) }}
+                      </span>
                       <div class="mini-bar">
                         <div class="mini-fill" [style.width.%]="scorePercent(atleta)"></div>
                       </div>
@@ -201,12 +208,26 @@ interface PosicaoOption {
     .results-header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 1rem;
       margin-bottom: 1rem;
       font-size: 0.875rem;
       color: var(--text-muted);
+      flex-wrap: wrap;
 
       strong { color: var(--text-secondary); }
+    }
+
+    .results-summary {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .score-context {
+      color: var(--text-secondary);
+      font-size: 0.78rem;
     }
 
     .ranking-table-wrap {
@@ -311,9 +332,18 @@ interface PosicaoOption {
       .score-num {
         font-size: 0.9rem;
         font-weight: 700;
-        color: #4ade80;
+        color: var(--green-primary);
         display: block;
-        margin-bottom: 0.25rem;
+      }
+
+      .score-criterion {
+        display: block;
+        max-width: 150px;
+        margin: 0.1rem 0 0.25rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-muted);
+        font-size: 0.68rem;
       }
     }
 
@@ -405,6 +435,28 @@ export class RankingPageComponent implements OnInit {
   }
 
   scorePercent(atleta: Atleta): number {
-    return Math.min((atleta.score / 12) * 100, 100);
+    return getScorePercent(atleta.score);
+  }
+
+  scoreCriteriaLabel(atleta: Atleta): string {
+    return getScoreCriteriaLabel(atleta);
+  }
+
+  scoreDescription(atleta: Atleta): string | null {
+    return getScoreDescription(atleta);
+  }
+
+  get scoreContextMessage(): string {
+    if (!this.data) {
+      return '';
+    }
+
+    if (this.posicaoSelecionada && this.data.criteriosScorePorPosicao?.[this.posicaoSelecionada]) {
+      return this.data.criteriosScorePorPosicao[this.posicaoSelecionada];
+    }
+
+    return this.data.criterioScore
+      ?? this.data.descricaoScore
+      ?? 'Score calculado pela API com critérios por posição quando disponíveis.';
   }
 }

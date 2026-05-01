@@ -155,6 +155,13 @@ interface Atleta {
   valorizacao: number;
   preco: number;
   score: number;
+  criterioScore?: string;
+  scoreCriterio?: string;
+  tipoScore?: string;
+  estrategiaScore?: string;
+  descricaoScore?: string;
+  scoreDescricao?: string;
+  pesosScore?: Record<string, number> | Array<{ nome: string; peso: number; descricao?: string }>;
   emDuvida: boolean;
   status?: string;
   substitutoProvavel?: Atleta;
@@ -182,6 +189,10 @@ interface RankingResponse {
   atletas: Atleta[];
   avisoMercado: string | null;
   rodada?: number;
+  criterioScore?: string;
+  descricaoScore?: string;
+  criteriosScorePorPosicao?: Record<string, string>;
+  pesosScorePorPosicao?: Record<string, unknown>;
 }
 ```
 
@@ -325,6 +336,7 @@ Seletor: `app-player-card`
 **Comportamentos visuais:**
 - Badge de posição colorido por posição (`GOL`=vermelho, `LAT`=azul, `ZAG`=roxo, `MEI`=verde, `ATA`=âmbar, `TEC`=cinza)
 - Barra de score normalizada para máximo de 12 pontos
+- Indicação do critério do score retornado pela API; quando ausente, fallback por posição
 - Valorização positiva em verde, negativa em vermelho
 - Atletas em dúvida: borda âmbar + gradiente de fundo + bloco com substituto provável
 
@@ -392,6 +404,7 @@ A tabela exibe para cada atleta:
 - Medalha (🥇🥈🥉) para os 3 primeiros
 - Badge de posição colorido
 - Barra de score de 80px de largura
+- Critério do score por atleta, usando metadados opcionais da API ou fallback local por posição
 - Valorização com cor (positivo verde / negativo vermelho)
 - Status: "Provável" (verde) ou "Dúvida" (âmbar)
 
