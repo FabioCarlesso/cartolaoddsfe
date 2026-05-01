@@ -156,11 +156,7 @@ interface Atleta {
   preco: number;
   score: number;
   criterioScore?: string;
-  scoreCriterio?: string;
-  tipoScore?: string;
-  estrategiaScore?: string;
   descricaoScore?: string;
-  scoreDescricao?: string;
   pesosScore?: Record<string, number> | Array<{ nome: string; peso: number; descricao?: string }>;
   emDuvida: boolean;
   status?: string;
@@ -192,7 +188,7 @@ interface RankingResponse {
   criterioScore?: string;
   descricaoScore?: string;
   criteriosScorePorPosicao?: Record<string, string>;
-  pesosScorePorPosicao?: Record<string, unknown>;
+  pesosScorePorPosicao?: Record<string, Record<string, number>>;
 }
 ```
 

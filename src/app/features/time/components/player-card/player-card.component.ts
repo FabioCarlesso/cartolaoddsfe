@@ -1,11 +1,12 @@
 import { Component, Input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Atleta } from '../../../../shared/models/atleta.model';
-import { getScoreCriteriaLabel, getScoreDescription, getScorePercent } from '../../../../shared/utils/score-info.util';
+import { getScorePercent } from '../../../../shared/utils/score-info.util';
+import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-label.pipe';
 
 @Component({
     selector: 'app-player-card',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, ScoreCriteriaLabelPipe],
     template: `
     <div class="player-card"
          [class.is-doubt]="atleta.emDuvida"
@@ -54,8 +55,8 @@ import { getScoreCriteriaLabel, getScoreDescription, getScorePercent } from '../
         <div class="score-progress" [style.width.%]="scorePercent"></div>
       </div>
 
-      <div class="score-context" [title]="scoreDescription ?? scoreCriteriaLabel">
-        {{ scoreCriteriaLabel }}
+      <div class="score-context" [title]="atleta.descricaoScore ?? (atleta | scoreCriteriaLabel)">
+        {{ atleta | scoreCriteriaLabel }}
       </div>
 
       @if (atleta.valorizacao !== 0) {
@@ -279,13 +280,5 @@ export class PlayerCardComponent {
 
   get scorePercent(): number {
     return getScorePercent(this.atleta.score);
-  }
-
-  get scoreCriteriaLabel(): string {
-    return getScoreCriteriaLabel(this.atleta);
-  }
-
-  get scoreDescription(): string | null {
-    return getScoreDescription(this.atleta);
   }
 }

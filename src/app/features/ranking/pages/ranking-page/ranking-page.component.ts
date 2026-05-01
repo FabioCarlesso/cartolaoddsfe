@@ -6,7 +6,8 @@ import { Atleta } from '../../../../shared/models/atleta.model';
 import { RankingService } from '../../services/ranking.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
-import { getScoreCriteriaLabel, getScoreDescription, getScorePercent } from '../../../../shared/utils/score-info.util';
+import { getScorePercent } from '../../../../shared/utils/score-info.util';
+import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-label.pipe';
 
 interface PosicaoOption {
   value: string;
@@ -15,7 +16,7 @@ interface PosicaoOption {
 
 @Component({
     selector: 'app-ranking-page',
-    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent],
+    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent, ScoreCriteriaLabelPipe],
     template: `
     <div class="page-container">
       <div class="page-header">
@@ -116,8 +117,8 @@ interface PosicaoOption {
                   <td class="td-score">
                     <div class="score-cell">
                       <span class="score-num">{{ atleta.score | number:'1.1-1' }}</span>
-                      <span class="score-criterion" [title]="scoreDescription(atleta) ?? scoreCriteriaLabel(atleta)">
-                        {{ scoreCriteriaLabel(atleta) }}
+                      <span class="score-criterion" [title]="atleta.descricaoScore ?? (atleta | scoreCriteriaLabel)">
+                        {{ atleta | scoreCriteriaLabel }}
                       </span>
                       <div class="mini-bar">
                         <div class="mini-fill" [style.width.%]="scorePercent(atleta)"></div>
@@ -436,14 +437,6 @@ export class RankingPageComponent implements OnInit {
 
   scorePercent(atleta: Atleta): number {
     return getScorePercent(atleta.score);
-  }
-
-  scoreCriteriaLabel(atleta: Atleta): string {
-    return getScoreCriteriaLabel(atleta);
-  }
-
-  scoreDescription(atleta: Atleta): string | null {
-    return getScoreDescription(atleta);
   }
 
   get scoreContextMessage(): string {

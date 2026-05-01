@@ -7,5 +7,5 @@ export interface RankingResponse {
   criterioScore?: string;
   descricaoScore?: string;
   criteriosScorePorPosicao?: Record<string, string>;
-  pesosScorePorPosicao?: Record<string, unknown>;
+  pesosScorePorPosicao?: Record<string, Record<string, number>>;
 }

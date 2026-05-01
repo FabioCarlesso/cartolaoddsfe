@@ -121,14 +121,16 @@ describe('TimeService', () => {
     httpMock.expectOne('/api/time').flush(rawApiResponse);
   });
 
-  it('should preserve optional score metadata from API', (done) => {
+  it('should normalise score metadata synonyms to canonical fields', (done) => {
     service.getTime().subscribe((data) => {
       const gabigol = data.titulares.find(a => a.apelido === 'Gabigol')!;
       const duvida = data.titulares.find(a => a.apelido === 'João Pedro')!;
       expect(gabigol.criterioScore).toBe('Atacante ofensivo');
       expect(gabigol.descricaoScore).toBe('Prioriza gols e assistências.');
-      expect(duvida.scoreCriterio).toBe('Critério defensivo da posição');
-      expect(duvida.substitutoProvavel!.tipoScore).toBe('Fallback padrão');
+      // API returned `scoreCriterio` — mapper normalises it to criterioScore
+      expect(duvida.criterioScore).toBe('Critério defensivo da posição');
+      // API returned `tipoScore` on the substitute — mapper normalises it to criterioScore
+      expect(duvida.substitutoProvavel!.criterioScore).toBe('Fallback padrão');
       done();
     });
     httpMock.expectOne('/api/time').flush(rawApiResponse);

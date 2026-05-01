@@ -7,17 +7,14 @@ const SCORE_FALLBACK_BY_POSITION: Record<string, string> = {
 
 export function getScoreCriteriaLabel(atleta: Atleta): string {
   return atleta.criterioScore
-    ?? atleta.scoreCriterio
-    ?? atleta.tipoScore
-    ?? atleta.estrategiaScore
     ?? SCORE_FALLBACK_BY_POSITION[atleta.posicao]
     ?? 'Critério padrão da API';
 }
 
 export function getScoreDescription(atleta: Atleta): string | null {
-  return atleta.descricaoScore ?? atleta.scoreDescricao ?? null;
+  return atleta.descricaoScore ?? null;
 }
 
 export function getScorePercent(score: number): number {
-  return Math.min(((score ?? 0) / 12) * 100, 100);
+  return Math.min((score / 12) * 100, 100);
 }
