@@ -127,6 +127,20 @@ describe('PlayerCardComponent', () => {
     expect(component.scorePercent).toBe(0);
   });
 
+  it('should show score criteria from API metadata', () => {
+    component.atleta = { ...baseAtleta, criterioScore: 'Atacante ofensivo' };
+    fixture.detectChanges();
+    const context = fixture.nativeElement.querySelector('.score-context');
+    expect(context.textContent).toContain('Atacante ofensivo');
+  });
+
+  it('should show defensive fallback score criteria for goalkeepers', () => {
+    component.atleta = { ...baseAtleta, posicao: 'GOL' };
+    fixture.detectChanges();
+    const context = fixture.nativeElement.querySelector('.score-context');
+    expect(context.textContent).toContain('Critério defensivo da posição');
+  });
+
   it('should show positive valorizacao', () => {
     component.atleta = { ...baseAtleta, valorizacao: 2.5 };
     fixture.detectChanges();

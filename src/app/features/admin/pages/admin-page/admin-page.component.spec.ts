@@ -86,8 +86,9 @@ describe('AdminPageComponent', () => {
 
   it('should call patchConfig with form values on salvar', () => {
     component.form.oddLimite = 2.5;
+    const expectedPayload = { ...component.form };
     component.salvar();
-    expect(mockConfigService.patchConfig).toHaveBeenCalledWith(component.form);
+    expect(mockConfigService.patchConfig).toHaveBeenCalledWith(expectedPayload);
   });
 
   it('should set successMessage after salvar', () => {

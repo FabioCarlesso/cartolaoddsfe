@@ -19,12 +19,16 @@ const makeAtleta = (overrides: Partial<Atleta>): Atleta => ({
 
 const mockRanking: RankingResponse = {
   atletas: [
-    makeAtleta({ apelido: 'Arrascaeta', posicao: 'MEI', score: 10.2 }),
-    makeAtleta({ apelido: 'Gabigol', posicao: 'ATA', score: 9.8 }),
-    makeAtleta({ apelido: 'Santos', posicao: 'GOL', score: 7.1 })
+    makeAtleta({ apelido: 'Santos', posicao: 'GOL', score: 11.1, criterioScore: 'Goleiro defensivo' }),
+    makeAtleta({ apelido: 'Gabigol', posicao: 'ATA', score: 9.8, criterioScore: 'Atacante ofensivo' }),
+    makeAtleta({ apelido: 'Arrascaeta', posicao: 'MEI', score: 10.2 })
   ],
   avisoMercado: null,
-  rodada: 15
+  rodada: 15,
+  criteriosScorePorPosicao: {
+    GOL: 'Goleiros priorizam indicadores defensivos.',
+    ATA: 'Atacantes priorizam gols e assistências.'
+  }
 };
 
 describe('RankingPageComponent', () => {
@@ -96,6 +100,27 @@ describe('RankingPageComponent', () => {
   it('should render correct number of rows', () => {
     const rows = fixture.nativeElement.querySelectorAll('.ranking-row');
     expect(rows.length).toBe(3);
+  });
+
+  it('should preserve API ranking order by returned score', () => {
+    const players = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.player-apelido')
+    ).map((el) => el.textContent?.trim());
+    expect(players).toEqual(['Santos', 'Gabigol', 'Arrascaeta']);
+  });
+
+  it('should render score criteria for goalkeeper, forward and fallback positions', () => {
+    const criteria = fixture.nativeElement.querySelectorAll('.score-criterion');
+    expect(criteria[0].textContent).toContain('Goleiro defensivo');
+    expect(criteria[1].textContent).toContain('Atacante ofensivo');
+    expect(criteria[2].textContent).toContain('Critério padrão da API');
+  });
+
+  it('should show position-specific score context when filtered', () => {
+    component.posicaoSelecionada = 'GOL';
+    fixture.detectChanges();
+    const context = fixture.nativeElement.querySelector('.score-context');
+    expect(context.textContent).toContain('Goleiros priorizam indicadores defensivos.');
   });
 
   it('should calculate scorePercent correctly', () => {

@@ -173,6 +173,9 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 
 ### Score (normalização visual)
 
+- O valor de `score` vem pronto da API e deve ser tratado como fonte de verdade para ranking/listagens
+- A API pode enviar metadados opcionais (`criterioScore`, `scoreCriterio`, `tipoScore`, `estrategiaScore`, `descricaoScore`, `pesosScore`) para explicar o cálculo usado
+- Se não houver metadados, o frontend mostra fallback visual por posição: goleiros como critério defensivo, atacantes como critério ofensivo e demais posições como critério padrão da API
 - Máximo assumido de 12 pontos para a barra de progresso
 - `scorePercent = Math.min((score / 12) * 100, 100)`
 - Scores acima de 12 ficam em 100% da barra
