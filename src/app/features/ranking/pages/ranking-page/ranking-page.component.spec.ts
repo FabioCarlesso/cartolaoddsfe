@@ -19,9 +19,9 @@ const makeAtleta = (overrides: Partial<Atleta>): Atleta => ({
 
 const mockRanking: RankingResponse = {
   atletas: [
-    makeAtleta({ apelido: 'Santos', posicao: 'GOL', score: 11.1, criterioScore: 'Goleiro defensivo' }),
-    makeAtleta({ apelido: 'Gabigol', posicao: 'ATA', score: 9.8, criterioScore: 'Atacante ofensivo' }),
-    makeAtleta({ apelido: 'Arrascaeta', posicao: 'MEI', score: 10.2 })
+    makeAtleta({ apelido: 'Santos', posicao: 'GOL', score: 11.1, criterioScore: 'Goleiro defensivo', desvioPadrao: 1.5, rodadasConsideradas: 5 }),
+    makeAtleta({ apelido: 'Gabigol', posicao: 'ATA', score: 9.8, criterioScore: 'Atacante ofensivo', desvioPadrao: 3.2, rodadasConsideradas: 5 }),
+    makeAtleta({ apelido: 'Arrascaeta', posicao: 'MEI', score: 10.2, rodadasConsideradas: 1 })
   ],
   avisoMercado: null,
   rodada: 15,
@@ -135,6 +135,14 @@ describe('RankingPageComponent', () => {
 
   it('should have correct default posicoes list length', () => {
     expect(component.posicoes.length).toBe(7); // todos + 6 posições
+  });
+
+  it('should render a consistency badge in each score cell', () => {
+    const badges = fixture.nativeElement.querySelectorAll('.score-cell app-consistencia-badge .consistencia-badge');
+    expect(badges.length).toBe(3);
+    expect(badges[0].getAttribute('data-level')).toBe('consistente');
+    expect(badges[1].getAttribute('data-level')).toBe('moderado');
+    expect(badges[2].getAttribute('data-level')).toBe('indisponivel');
   });
 
   it('should show avisoMercado alert when present', () => {

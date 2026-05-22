@@ -163,4 +163,19 @@ describe('PlayerCardComponent', () => {
     const val = fixture.nativeElement.querySelector('.valorizacao');
     expect(val).toBeNull();
   });
+
+  it('should render the consistency badge next to the score', () => {
+    component.atleta = { ...baseAtleta, desvioPadrao: 1.5, rodadasConsideradas: 5 };
+    fixture.detectChanges();
+    const badge = fixture.nativeElement.querySelector('app-consistencia-badge .consistencia-badge');
+    expect(badge).toBeTruthy();
+    expect(badge.getAttribute('data-level')).toBe('consistente');
+  });
+
+  it('should render a neutral consistency badge when history is insufficient', () => {
+    component.atleta = { ...baseAtleta, desvioPadrao: 1.5, rodadasConsideradas: 1 };
+    fixture.detectChanges();
+    const badge = fixture.nativeElement.querySelector('app-consistencia-badge .consistencia-badge');
+    expect(badge.getAttribute('data-level')).toBe('indisponivel');
+  });
 });

@@ -9,7 +9,7 @@
 Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso) e apresenta:
 
 - **Time ideal da rodada** em formação 4-3-3 visual
-- **Ranking de atletas** por score ponderado com filtros por posição
+- **Ranking de atletas** por score ponderado com filtros por posição e indicador de consistência (desvio padrão)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
 - **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
 
@@ -162,9 +162,11 @@ src/
     │       └── error.interceptor.ts # Tratamento global de erros HTTP
     ├── shared/
     │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos)
+    │   ├── utils/                   # consistencia.util (badge), score-info.util
     │   └── components/
     │       ├── loading-spinner/     # Spinner animado
-    │       └── alert-banner/        # Banners de aviso/erro/sucesso
+    │       ├── alert-banner/        # Banners de aviso/erro/sucesso
+    │       └── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
     └── features/
         ├── time/
         │   ├── services/time.service.ts
@@ -235,20 +237,22 @@ npm test -- --code-coverage
 | Arquivo de teste | Camada | Cenários |
 |---|---|---|
 | `app.component.spec.ts` | Shell | Navbar, links, router-outlet |
+| `consistencia.util.spec.ts` | Util | Faixas de desvio, badge neutro, tooltip |
+| `consistencia-badge.component.spec.ts` | Shared | Cores por faixa, badge neutro, toggle do tooltip |
 | `error.interceptor.spec.ts` | Core | Status 0, 400, 422, 502, 500, sucesso |
 | `loading-spinner.component.spec.ts` | Shared | message, fullPage, spinner DOM |
 | `alert-banner.component.spec.ts` | Shared | type, icon, classes CSS, message |
-| `time.service.spec.ts` | Service | GET /api/time, dados, erros HTTP |
+| `time.service.spec.ts` | Service | GET /api/time, dados, desvioPadrao/rodadasConsideradas, erros HTTP |
 | `ranking.service.spec.ts` | Service | GET /api/ranking, params posicao/limite, erros |
 | `favoritos.service.spec.ts` | Service | GET /api/favoritos, oddLimite opcional, erros |
-| `player-card.component.spec.ts` | Component | scorePercent, critério do score, captain, dúvida, substituto, valorizacao |
+| `player-card.component.spec.ts` | Component | scorePercent, critério do score, captain, dúvida, substituto, valorizacao, badge de consistência |
 | `team-view.component.spec.ts` | Component | Filtros por posição, defensores LAT-ZAG-ZAG-LAT, capitão, reserva luxo |
 | `time-page.component.spec.ts` | Page | Load, erro, métricas calculadas, avisoMercado |
-| `ranking-page.component.spec.ts` | Page | Filtros, scorePercent, critério por posição, ordem da API, erro, avisoMercado |
+| `ranking-page.component.spec.ts` | Page | Filtros, scorePercent, critério por posição, ordem da API, badge de consistência, erro, avisoMercado |
 | `favoritos-page.component.spec.ts` | Page | probFavorito, probEmpate, reset, cards DOM |
 | `configuracao.service.spec.ts` | Service | GET /api/config, PATCH, POST reset, erros |
 | `cache.service.spec.ts` | Service | DELETE /api/cache, DELETE /{nome}, erro 400 |
-| `admin-page.component.spec.ts` | Page | Load config, salvar, resetar, cache, validação pesos |
+| `admin-page.component.spec.ts` | Page | Load config, salvar, resetar, cache, validação pesos, validação pesoDesvio |
 
 ---
 

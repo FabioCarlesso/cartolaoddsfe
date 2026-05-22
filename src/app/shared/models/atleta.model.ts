@@ -9,6 +9,8 @@ export interface Atleta {
   criterioScore?: string;
   descricaoScore?: string;
   pesosScore?: Record<string, number> | Array<{ nome: string; peso: number; descricao?: string }>;
+  desvioPadrao?: number;
+  rodadasConsideradas?: number;
   emDuvida: boolean;
   status?: string;
   substitutoProvavel?: Atleta;

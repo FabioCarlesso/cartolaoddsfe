@@ -180,6 +180,18 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 - `scorePercent = Math.min((score / 12) * 100, 100)`
 - Scores acima de 12 ficam em 100% da barra
 
+### Indicador de Consistência (desvio padrão)
+
+- A API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`
+- O frontend exibe um badge colorido ao lado do score nas telas de **Ranking** e **Time**
+- Classificação centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`):
+  - `0.0 – 2.0` → 🟢 Consistente
+  - `2.1 – 4.0` → 🟡 Moderado
+  - `> 4.0` → 🔴 Instável
+  - `rodadasConsideradas < 2` → ⚪ Histórico insuficiente (desvio não calculável)
+- Componente reutilizável `app-consistencia-badge` com tooltip (hover no desktop, toque no mobile)
+- A configuração `pesoDesvio` (0.0–1.0, padrão 0.05) controla a penalidade no backend; editável no `/admin`
+
 ### Probabilidade Implícita (Favoritos)
 
 - Calculada como `(1/odd) / sum(1/odds)` para cada desfecho
