@@ -182,7 +182,8 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 
 ### Indicador de Consistência (desvio padrão)
 
-- A API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`
+- Quando disponíveis, a API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`
+- **Status do contrato (validado em 22/05/2026 contra `localhost:8080`):** `pesoDesvio` já existe em `/api/config`; os campos `desvioPadrao`/`rodadasConsideradas` ainda **não** são retornados em `AtletaDto`/`AtletaRankingDto` (dependem da issue de backend). Enquanto não vierem, o frontend exibe o badge neutro ⚪ — degradação graciosa, sem quebra.
 - O frontend exibe um badge colorido ao lado do score nas telas de **Ranking** e **Time**
 - Classificação centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`):
   - `0.0 – 2.0` → 🟢 Consistente
