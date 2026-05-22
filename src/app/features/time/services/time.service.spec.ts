@@ -30,6 +30,9 @@ const rawAtletaDuvida = {
   preco: 8.84,
   score: 6.62,
   scoreCriterio: 'Critério defensivo da posição',
+  // Legacy speculative synonyms — no longer part of the API contract; must be ignored
+  desvioPadraoScore: 9.9,
+  qtdRodadasConsideradas: 7,
   status: '⚠️ Dúvida',
   substitutoProvavel: {
     apelido: 'Alexander',
@@ -148,9 +151,10 @@ describe('TimeService', () => {
     httpMock.expectOne('/api/time').flush(rawApiResponse);
   });
 
-  it('should leave consistency fields undefined when the API omits them', (done) => {
+  it('should leave consistency fields undefined when the API omits the contract fields (legacy synonyms are ignored)', (done) => {
     service.getTime().subscribe((data) => {
       const semHistorico = data.titulares.find(a => a.apelido === 'João Pedro')!;
+      // Payload only carries the deprecated synonyms; the mapper must not honour them
       expect(semHistorico.desvioPadrao).toBeUndefined();
       expect(semHistorico.rodadasConsideradas).toBeUndefined();
       done();
