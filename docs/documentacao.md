@@ -166,7 +166,7 @@ interface Atleta {
 }
 ```
 
-Os campos `desvioPadrao` e `rodadasConsideradas` alimentam o **indicador de consistência** (ver `ConsistenciaBadgeComponent` na seção 7). Quando `rodadasConsideradas < 2` — ou quando a API ainda não retorna esses campos (dependem da issue de backend) — o desvio não é calculável e o frontend exibe um badge neutro ⚪.
+Os campos `desvioPadrao` e `rodadasConsideradas` são retornados pela API (`/api/time` e `/api/ranking`) com esses nomes oficiais e alimentam o **indicador de consistência** (ver `ConsistenciaBadgeComponent` na seção 7). Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico) o desvio não é calculável e o frontend exibe um badge neutro ⚪.
 
 ### `TimeResponse`
 
