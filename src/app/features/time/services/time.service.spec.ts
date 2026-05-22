@@ -14,6 +14,8 @@ const rawAtleta = {
   score: 8.3,
   criterioScore: 'Atacante ofensivo',
   descricaoScore: 'Prioriza gols e assistências.',
+  desvioPadrao: 1.5,
+  rodadasConsideradas: 5,
   status: 'Provável',
   substitutoProvavel: null
 };
@@ -131,6 +133,26 @@ describe('TimeService', () => {
       expect(duvida.criterioScore).toBe('Critério defensivo da posição');
       // API returned `tipoScore` on the substitute — mapper normalises it to criterioScore
       expect(duvida.substitutoProvavel!.criterioScore).toBe('Fallback padrão');
+      done();
+    });
+    httpMock.expectOne('/api/time').flush(rawApiResponse);
+  });
+
+  it('should map desvioPadrao and rodadasConsideradas to the atleta', (done) => {
+    service.getTime().subscribe((data) => {
+      const gabigol = data.titulares.find(a => a.apelido === 'Gabigol')!;
+      expect(gabigol.desvioPadrao).toBe(1.5);
+      expect(gabigol.rodadasConsideradas).toBe(5);
+      done();
+    });
+    httpMock.expectOne('/api/time').flush(rawApiResponse);
+  });
+
+  it('should leave consistency fields undefined when the API omits them', (done) => {
+    service.getTime().subscribe((data) => {
+      const semHistorico = data.titulares.find(a => a.apelido === 'João Pedro')!;
+      expect(semHistorico.desvioPadrao).toBeUndefined();
+      expect(semHistorico.rodadasConsideradas).toBeUndefined();
       done();
     });
     httpMock.expectOne('/api/time').flush(rawApiResponse);

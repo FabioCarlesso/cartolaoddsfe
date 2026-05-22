@@ -3,10 +3,11 @@ import { DecimalPipe } from '@angular/common';
 import { Atleta } from '../../../../shared/models/atleta.model';
 import { getScorePercent } from '../../../../shared/utils/score-info.util';
 import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-label.pipe';
+import { ConsistenciaBadgeComponent } from '../../../../shared/components/consistencia-badge/consistencia-badge.component';
 
 @Component({
     selector: 'app-player-card',
-    imports: [DecimalPipe, ScoreCriteriaLabelPipe],
+    imports: [DecimalPipe, ScoreCriteriaLabelPipe, ConsistenciaBadgeComponent],
     template: `
     <div class="player-card"
          [class.is-doubt]="atleta.emDuvida"
@@ -47,7 +48,12 @@ import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-
         </div>
         <div class="stat">
           <span class="stat-label">Score</span>
-          <span class="stat-value score">{{ atleta.score | number:'1.1-1' }}</span>
+          <span class="stat-value score">
+            {{ atleta.score | number:'1.1-1' }}
+            <app-consistencia-badge
+              [desvioPadrao]="atleta.desvioPadrao"
+              [rodadasConsideradas]="atleta.rodadasConsideradas" />
+          </span>
         </div>
       </div>
 
@@ -220,6 +226,9 @@ import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-
 
         &.score {
           color: #4ade80;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
         }
       }
     }

@@ -8,6 +8,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
 import { getScorePercent } from '../../../../shared/utils/score-info.util';
 import { ScoreCriteriaLabelPipe } from '../../../../shared/pipes/score-criteria-label.pipe';
+import { ConsistenciaBadgeComponent } from '../../../../shared/components/consistencia-badge/consistencia-badge.component';
 
 interface PosicaoOption {
   value: string;
@@ -16,7 +17,7 @@ interface PosicaoOption {
 
 @Component({
     selector: 'app-ranking-page',
-    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent, ScoreCriteriaLabelPipe],
+    imports: [FormsModule, DecimalPipe, LoadingSpinnerComponent, AlertBannerComponent, ScoreCriteriaLabelPipe, ConsistenciaBadgeComponent],
     template: `
     <div class="page-container">
       <div class="page-header">
@@ -116,7 +117,12 @@ interface PosicaoOption {
                   </td>
                   <td class="td-score">
                     <div class="score-cell">
-                      <span class="score-num">{{ atleta.score | number:'1.1-1' }}</span>
+                      <span class="score-line">
+                        <span class="score-num">{{ atleta.score | number:'1.1-1' }}</span>
+                        <app-consistencia-badge
+                          [desvioPadrao]="atleta.desvioPadrao"
+                          [rodadasConsideradas]="atleta.rodadasConsideradas" />
+                      </span>
                       <span class="score-criterion" [title]="atleta.descricaoScore ?? (atleta | scoreCriteriaLabel)">
                         {{ atleta | scoreCriteriaLabel }}
                       </span>
@@ -330,11 +336,16 @@ interface PosicaoOption {
     .score-cell {
       min-width: 100px;
 
+      .score-line {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
       .score-num {
         font-size: 0.9rem;
         font-weight: 700;
         color: var(--green-primary);
-        display: block;
       }
 
       .score-criterion {

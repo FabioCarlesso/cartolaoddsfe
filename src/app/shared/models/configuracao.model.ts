@@ -5,6 +5,7 @@ export interface ConfiguracaoResponse {
   pesoDesempenho: number;
   pesoFatorCasa: number;
   pesoTimeFavorito: number;
+  pesoDesvio: number;
   formacaoGol: number;
   formacaoLat: number;
   formacaoZag: number;
@@ -21,6 +22,7 @@ export interface ConfiguracaoRequest {
   pesoDesempenho?: number;
   pesoFatorCasa?: number;
   pesoTimeFavorito?: number;
+  pesoDesvio?: number;
   formacaoGol?: number;
   formacaoLat?: number;
   formacaoZag?: number;

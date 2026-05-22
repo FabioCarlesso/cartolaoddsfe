@@ -93,6 +93,28 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
               </div>
             </div>
 
+            <!-- Consistência -->
+            <div class="config-card">
+              <h3 class="config-group-title">&#128201; Consistência</h3>
+              <div class="form-group">
+                <label for="pesoDesvio">Peso do desvio padrão</label>
+                <p class="field-hint">Penalidade aplicada a atletas inconsistentes. 0 = desativado. Deve estar entre 0.0 e 1.0.</p>
+                <input
+                  id="pesoDesvio"
+                  type="number"
+                  class="form-control"
+                  [class.invalid]="!pesoDesvioValido"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  [(ngModel)]="form.pesoDesvio"
+                />
+                @if (!pesoDesvioValido) {
+                  <span class="field-error">&#9888; Deve estar entre 0.0 e 1.0</span>
+                }
+              </div>
+            </div>
+
             <!-- Formação -->
             <div class="config-card">
               <h3 class="config-group-title">&#9917; Formação</h3>
@@ -127,7 +149,7 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
           </div>
 
           <div class="config-actions">
-            <button class="btn btn-primary" (click)="salvar()" [disabled]="saving">
+            <button class="btn btn-primary" (click)="salvar()" [disabled]="saving || !pesoDesvioValido">
               {{ saving ? 'Salvando...' : '&#10003; Salvar Alterações' }}
             </button>
             <button class="btn btn-secondary" (click)="resetar()" [disabled]="saving">
@@ -256,6 +278,16 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
       font-size: 0.8rem;
     }
 
+    .field-error {
+      margin-top: 0.35rem;
+      color: var(--red);
+      font-size: 0.78rem;
+    }
+
+    .form-control.invalid {
+      border-color: var(--red);
+    }
+
     .config-actions {
       display: flex;
       gap: 1rem;
@@ -382,6 +414,11 @@ export class AdminPageComponent implements OnInit {
     return Math.abs(this.somasPesos - 1.0) <= 0.01;
   }
 
+  get pesoDesvioValido(): boolean {
+    const peso = this.form.pesoDesvio;
+    return peso == null || (peso >= 0 && peso <= 1);
+  }
+
   ngOnInit(): void {
     this.loadConfig();
   }
@@ -478,6 +515,7 @@ export class AdminPageComponent implements OnInit {
       pesoDesempenho: data.pesoDesempenho,
       pesoFatorCasa: data.pesoFatorCasa,
       pesoTimeFavorito: data.pesoTimeFavorito,
+      pesoDesvio: data.pesoDesvio,
       formacaoGol: data.formacaoGol,
       formacaoLat: data.formacaoLat,
       formacaoZag: data.formacaoZag,

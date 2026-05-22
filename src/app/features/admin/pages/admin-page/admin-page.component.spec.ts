@@ -12,6 +12,7 @@ const mockConfig: ConfiguracaoResponse = {
   pesoDesempenho: 0.20,
   pesoFatorCasa: 0.10,
   pesoTimeFavorito: 0.10,
+  pesoDesvio: 0.05,
   formacaoGol: 1,
   formacaoLat: 2,
   formacaoZag: 2,
@@ -72,6 +73,7 @@ describe('AdminPageComponent', () => {
   it('should sync form from config on load', () => {
     expect(component.form.oddLimite).toBe(3.0);
     expect(component.form.pesoMediaPontos).toBe(0.40);
+    expect(component.form.pesoDesvio).toBe(0.05);
     expect(component.form.formacaoGol).toBe(1);
   });
 
@@ -127,6 +129,43 @@ describe('AdminPageComponent', () => {
   it('should consider pesosValidos false when sum differs from 1.0 by more than 0.01', () => {
     component.form.pesoMediaPontos = 0.50;
     expect(component.pesosValidos).toBeFalse();
+  });
+
+  it('should consider pesoDesvioValido true for the default value', () => {
+    expect(component.pesoDesvioValido).toBeTrue();
+  });
+
+  it('should consider pesoDesvioValido true at the range bounds', () => {
+    component.form.pesoDesvio = 0;
+    expect(component.pesoDesvioValido).toBeTrue();
+    component.form.pesoDesvio = 1;
+    expect(component.pesoDesvioValido).toBeTrue();
+  });
+
+  it('should consider pesoDesvioValido false when above 1.0', () => {
+    component.form.pesoDesvio = 1.5;
+    expect(component.pesoDesvioValido).toBeFalse();
+  });
+
+  it('should consider pesoDesvioValido false when below 0.0', () => {
+    component.form.pesoDesvio = -0.1;
+    expect(component.pesoDesvioValido).toBeFalse();
+  });
+
+  it('should render the pesoDesvio input bound to the form', () => {
+    const input = fixture.nativeElement.querySelector('#pesoDesvio');
+    expect(input).toBeTruthy();
+    expect(input.getAttribute('max')).toBe('1');
+    expect(input.getAttribute('min')).toBe('0');
+  });
+
+  it('should show a validation error and disable save when pesoDesvio is out of range', () => {
+    component.form.pesoDesvio = 1.5;
+    fixture.detectChanges();
+    const error = fixture.nativeElement.querySelector('.field-error');
+    const saveBtn = fixture.nativeElement.querySelector('.btn-primary');
+    expect(error).toBeTruthy();
+    expect(saveBtn.disabled).toBeTrue();
   });
 
   it('should invalidate all caches on invalidarTodos', () => {

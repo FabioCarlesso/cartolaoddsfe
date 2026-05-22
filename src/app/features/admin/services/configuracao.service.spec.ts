@@ -11,6 +11,7 @@ const mockConfig: ConfiguracaoResponse = {
   pesoDesempenho: 0.20,
   pesoFatorCasa: 0.10,
   pesoTimeFavorito: 0.10,
+  pesoDesvio: 0.05,
   formacaoGol: 1,
   formacaoLat: 2,
   formacaoZag: 2,

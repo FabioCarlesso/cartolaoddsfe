@@ -158,11 +158,15 @@ interface Atleta {
   criterioScore?: string;
   descricaoScore?: string;
   pesosScore?: Record<string, number> | Array<{ nome: string; peso: number; descricao?: string }>;
+  desvioPadrao?: number;        // desvio padrão do score nas últimas rodadas
+  rodadasConsideradas?: number; // nº de rodadas usadas no cálculo do desvio
   emDuvida: boolean;
   status?: string;
   substitutoProvavel?: Atleta;
 }
 ```
+
+Os campos `desvioPadrao` e `rodadasConsideradas` alimentam o **indicador de consistência** (ver `ConsistenciaBadgeComponent` na seção 7). Quando `rodadasConsideradas < 2` — ou quando a API ainda não retorna esses campos (dependem da issue de backend) — o desvio não é calculável e o frontend exibe um badge neutro ⚪.
 
 ### `TimeResponse`
 
@@ -302,6 +306,32 @@ Seletor: `app-alert-banner`
 | `type` | `'warning' \| 'error' \| 'info' \| 'success'` | `'info'` | Determina cor e ícone |
 
 Cada tipo tem ícone automático: ⚠️ `warning`, ❌ `error`, ℹ️ `info`, ✅ `success`.
+
+### `ConsistenciaBadgeComponent`
+
+Seletor: `app-consistencia-badge`
+
+Indicador visual de consistência do atleta baseado no desvio padrão do score.
+
+| Input | Tipo | Descrição |
+|---|---|---|
+| `desvioPadrao` | `number \| null` | Desvio padrão do score do atleta |
+| `rodadasConsideradas` | `number \| null` | Nº de rodadas usadas no cálculo |
+
+A classificação é centralizada em `shared/utils/consistencia.util.ts` →
+`getConsistenciaBadge(desvioPadrao, rodadasConsideradas)`:
+
+| Faixa de desvio | Badge | `level` |
+|---|---|---|
+| `0.0 – 2.0` | 🟢 Consistente | `consistente` |
+| `2.1 – 4.0` | 🟡 Moderado | `moderado` |
+| `> 4.0` | 🔴 Instável | `instavel` |
+| `rodadasConsideradas < 2` | ⚪ Histórico insuficiente | `indisponivel` |
+
+O tooltip (`Desvio padrão: X` + `Baseado nas últimas N rodadas`) abre ao passar o
+mouse (desktop) e ao tocar/clicar (mobile), fechando ao clicar fora ou perder o foco.
+Usado nas telas de **Ranking** (inline na célula de score) e **Time** (ao lado do
+score em cada `PlayerCardComponent`, cobrindo titulares e reservas).
 
 ---
 
@@ -463,6 +493,7 @@ Exibe o formulário com todos os campos da configuração carregados do banco vi
 | `pesoDesempenho` | `number` | 0.0 – 1.0 |
 | `pesoFatorCasa` | `number` | 0.0 – 1.0 |
 | `pesoTimeFavorito` | `number` | 0.0 – 1.0 |
+| `pesoDesvio` | `number` | 0.0 – 1.0 (penalidade de inconsistência; padrão 0.05) |
 | `formacaoGol` | `number` | >= 1 |
 | `formacaoLat` | `number` | >= 1 |
 | `formacaoZag` | `number` | >= 1 |
@@ -479,6 +510,10 @@ get pesosValidos(): boolean {
   return Math.abs(this.somasPesos - 1.0) <= 0.01;
 }
 ```
+
+> `pesoDesvio` é uma penalidade independente da soma dos pesos. É validado por faixa
+> (`pesoDesvioValido`): fora de `0.0 – 1.0` o frontend exibe erro inline e desabilita
+> o botão **Salvar Alterações**.
 
 Ações:
 - **Salvar Alterações** — envia `PATCH /api/config` com todos os campos do formulário.
@@ -503,6 +538,7 @@ interface ConfiguracaoResponse {
   oddLimite: number;
   pesoMediaPontos: number; pesoValorizacao: number;
   pesoDesempenho: number; pesoFatorCasa: number; pesoTimeFavorito: number;
+  pesoDesvio: number;
   formacaoGol: number; formacaoLat: number; formacaoZag: number;
   formacaoMei: number; formacaoAta: number; formacaoTec: number;
   updatedAt: string;
