@@ -28,6 +28,20 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'historico',
+    loadComponent: () =>
+      import('./features/historico/pages/historico-page/historico-page.component').then(
+        (m) => m.HistoricoPageComponent
+      )
+  },
+  {
+    path: 'historico/:rodadaId',
+    loadComponent: () =>
+      import('./features/historico/pages/historico-detalhe-page/historico-detalhe-page.component').then(
+        (m) => m.HistoricoDetalhePageComponent
+      )
+  },
+  {
     path: 'admin',
     loadComponent: () =>
       import('./features/admin/pages/admin-page/admin-page.component').then(
