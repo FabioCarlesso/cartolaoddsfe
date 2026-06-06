@@ -142,6 +142,8 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/time` | Time ideal com formação 4-3-3 |
 | `/ranking` | Ranking de atletas com filtros |
 | `/favoritos` | Análise de odds e favoritos |
+| `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real |
+| `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) |
 | `/admin` | Configurações de negócio e gerenciamento de cache |
 
 ---
@@ -161,8 +163,8 @@ src/
     │   └── interceptors/
     │       └── error.interceptor.ts # Tratamento global de erros HTTP
     ├── shared/
-    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos)
-    │   ├── utils/                   # consistencia.util (badge), score-info.util
+    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico)
+    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util
     │   └── components/
     │       ├── loading-spinner/     # Spinner animado
     │       ├── alert-banner/        # Banners de aviso/erro/sucesso
@@ -180,6 +182,11 @@ src/
         ├── favoritos/
         │   ├── services/favoritos.service.ts
         │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
+        ├── historico/
+        │   ├── services/historico.service.ts # GET lista/detalhe, POST atualizar-pontuacao
+        │   └── pages/
+        │       ├── historico-page/           # Listagem de rodadas + gráfico de evolução
+        │       └── historico-detalhe-page/   # Tabelas titulares/reservas + gráfico de barras
         └── admin/
             ├── services/
             │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
@@ -198,6 +205,7 @@ Todos os serviços apontam para `/api` (proxiado para `localhost:8080/api` em de
 | `TimeService` | `GET /api/time` |
 | `RankingService` | `GET /api/ranking?posicao=X&limite=N` |
 | `FavoritosService` | `GET /api/favoritos?oddLimite=X` |
+| `HistoricoService` | `GET /api/historico`, `GET /api/historico/{rodadaId}`, `POST /api/historico/{rodadaId}/atualizar-pontuacao` |
 | `ConfiguracaoService` | `GET /api/config`, `PATCH /api/config`, `POST /api/config/reset` |
 | `CacheService` | `DELETE /api/cache`, `DELETE /api/cache/{nome}` |
 
