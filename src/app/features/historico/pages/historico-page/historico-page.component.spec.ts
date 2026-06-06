@@ -135,6 +135,24 @@ describe('HistoricoPageComponent', () => {
     expect(fixture.componentInstance.atualizando[15]).toBeFalse();
   });
 
+  it('should exclude reservas (reservaLuxo) from the inline total', async () => {
+    const fixture = await setup(mockService);
+    const detalhe: EscalacaoRodadaResponse = {
+      rodadaId: 15,
+      atletas: [
+        { apelido: 'A', posicao: 'ATA', clube: 'X', scoreSugerido: 10, pontuacaoReal: 8, capitao: true, reservaLuxo: false, emDuvida: false },
+        { apelido: 'B', posicao: 'MEI', clube: 'Y', scoreSugerido: 7, pontuacaoReal: 5, capitao: false, reservaLuxo: false, emDuvida: false },
+        { apelido: 'R', posicao: 'MEI', clube: 'Z', scoreSugerido: 6, pontuacaoReal: 9, capitao: false, reservaLuxo: true, emDuvida: false }
+      ]
+    };
+    mockService.atualizarPontuacao.and.returnValue(of(detalhe));
+    const alvo = fixture.componentInstance.rodadas.find((r) => r.rodadaId === 15)!;
+    fixture.componentInstance.atualizar(alvo);
+    const atualizada = fixture.componentInstance.rodadas.find((r) => r.rodadaId === 15)!;
+    // capitão dobrado, reserva ignorada: 8*2 + 5 = 21 (reserva de 9 NÃO entra)
+    expect(atualizada.pontuacaoRealTotal).toBe(21);
+  });
+
   it('should set inline error when atualizar fails', async () => {
     const fixture = await setup(mockService);
     mockService.atualizarPontuacao.and.returnValue(throwError(() => ({ userMessage: 'Erro API' })));

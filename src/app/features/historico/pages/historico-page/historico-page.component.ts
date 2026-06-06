@@ -345,12 +345,18 @@ export class HistoricoPageComponent implements OnInit {
   }
 
   /** Recalcula os totais do card a partir dos atletas retornados pela atualização. */
-  private aplicarPontuacao(r: RodadaResumo, atletas: { pontuacaoReal: number | null; capitao: boolean }[]): void {
-    const temReal = atletas.some((a) => a.pontuacaoReal != null);
+  private aplicarPontuacao(
+    r: RodadaResumo,
+    atletas: { pontuacaoReal: number | null; capitao: boolean; reservaLuxo: boolean }[]
+  ): void {
+    // Reservas não pontuam diretamente; o total considera apenas titulares,
+    // espelhando o cálculo do backend (RodadaResumo) e da tela de detalhe.
+    const titulares = atletas.filter((a) => !a.reservaLuxo);
+    const temReal = titulares.some((a) => a.pontuacaoReal != null);
     if (!temReal) {
       return;
     }
-    const total = atletas.reduce((acc, a) => {
+    const total = titulares.reduce((acc, a) => {
       const pts = a.pontuacaoReal ?? 0;
       return acc + (a.capitao ? pts * 2 : pts);
     }, 0);
