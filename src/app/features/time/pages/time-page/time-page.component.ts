@@ -33,7 +33,7 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
         <app-orcamento-input
           [(orcamento)]="orcamento"
           (limpar)="onLimparOrcamento()"
-          (submit)="load()"
+          (gerar)="load()"
         >
           <button class="btn btn-primary" (click)="load()" [disabled]="loading || orcamentoInvalido">
             <span>{{ loading ? 'Carregando...' : '&#128260; Gerar Time' }}</span>
@@ -171,12 +171,6 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
     </div>
   `,
     styles: [`
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
     .rodada-badge {
       display: inline-flex;
       align-items: center;
@@ -481,7 +475,8 @@ export class TimePageComponent implements OnInit {
       const stored = sessionStorage.getItem(ORCAMENTO_STORAGE_KEY);
       if (stored == null || stored === '') return null;
       const parsed = Number(stored);
-      return Number.isNaN(parsed) ? null : parsed;
+      // Descarta valores não numéricos ou <= 0 para não travar o load inicial
+      return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
     } catch {
       return null;
     }

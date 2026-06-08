@@ -19,6 +19,12 @@ describe('OrcamentoInputComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should generate a unique inputId per instance', () => {
+    const a = TestBed.createComponent(OrcamentoInputComponent).componentInstance;
+    const b = TestBed.createComponent(OrcamentoInputComponent).componentInstance;
+    expect(a.inputId).not.toBe(b.inputId);
+  });
+
   it('should not be invalid when empty', () => {
     component.orcamento = null;
     expect(component.invalido).toBeFalse();
@@ -85,17 +91,17 @@ describe('OrcamentoInputComponent', () => {
     expect(fixture.nativeElement.querySelector('.field-error')).toBeTruthy();
   });
 
-  it('should emit submit on Enter when valid', () => {
-    const spy = jasmine.createSpy('submit');
-    component.submit.subscribe(spy);
+  it('should emit gerar on Enter when valid', () => {
+    const spy = jasmine.createSpy('gerar');
+    component.gerar.subscribe(spy);
     component.orcamento = 120;
     component.onEnter();
     expect(spy).toHaveBeenCalled();
   });
 
-  it('should not emit submit on Enter when invalid', () => {
-    const spy = jasmine.createSpy('submit');
-    component.submit.subscribe(spy);
+  it('should not emit gerar on Enter when invalid', () => {
+    const spy = jasmine.createSpy('gerar');
+    component.gerar.subscribe(spy);
     component.orcamento = 0;
     component.onEnter();
     expect(spy).not.toHaveBeenCalled();

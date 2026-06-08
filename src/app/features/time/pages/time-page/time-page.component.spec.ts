@@ -196,6 +196,26 @@ describe('TimePageComponent', () => {
     expect(component.orcamento).toBeNull();
   });
 
+  it('should ignore a stored orcamento <= 0 on init', () => {
+    sessionStorage.setItem('time.orcamento', '0');
+    try {
+      const fresh = TestBed.createComponent(TimePageComponent);
+      expect(fresh.componentInstance.orcamento).toBeNull();
+    } finally {
+      sessionStorage.removeItem('time.orcamento');
+    }
+  });
+
+  it('should restore a valid stored orcamento on init', () => {
+    sessionStorage.setItem('time.orcamento', '120');
+    try {
+      const fresh = TestBed.createComponent(TimePageComponent);
+      expect(fresh.componentInstance.orcamento).toBe(120);
+    } finally {
+      sessionStorage.removeItem('time.orcamento');
+    }
+  });
+
   it('should label estrategia SCORE_MAXIMO', () => {
     component.time = { ...mockTime, estrategia: 'SCORE_MAXIMO' };
     expect(component.estrategiaLabel).toContain('Score Máximo');

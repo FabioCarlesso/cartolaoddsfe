@@ -138,9 +138,12 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class OrcamentoInputComponent {
+  private static seq = 0;
+
   @Input() label = 'Orçamento máximo (cartoletas)';
   @Input() placeholder = 'Ex: 120.0';
-  @Input() inputId = 'orcamento-input';
+  // Id único por instância evita colisão de id/label[for] quando o componente é reutilizado na mesma página
+  @Input() inputId = `orcamento-input-${OrcamentoInputComponent.seq++}`;
 
   @Input() orcamento: number | null = null;
   @Output() orcamentoChange = new EventEmitter<number | null>();
@@ -149,7 +152,7 @@ export class OrcamentoInputComponent {
   @Output() limpar = new EventEmitter<void>();
 
   /** Emitido ao pressionar Enter no campo (atalho para a ação principal). */
-  @Output() submit = new EventEmitter<void>();
+  @Output() gerar = new EventEmitter<void>();
 
   get invalido(): boolean {
     return this.orcamento != null && this.orcamento <= 0;
@@ -169,7 +172,7 @@ export class OrcamentoInputComponent {
 
   onEnter(): void {
     if (!this.invalido) {
-      this.submit.emit();
+      this.gerar.emit();
     }
   }
 }
