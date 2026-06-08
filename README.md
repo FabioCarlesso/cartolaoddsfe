@@ -8,7 +8,7 @@
 
 Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso) e apresenta:
 
-- **Time ideal da rodada** em formação 4-3-3 visual
+- **Time ideal da rodada** em formação 4-3-3 visual, com orçamento máximo opcional (cartoletas), indicador de estratégia (Score Máximo × Custo-Benefício), custo total e barra de saldo
 - **Ranking de atletas** por score ponderado com filtros por posição e indicador de consistência (desvio padrão)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
 - **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
@@ -168,7 +168,8 @@ src/
     │   └── components/
     │       ├── loading-spinner/     # Spinner animado
     │       ├── alert-banner/        # Banners de aviso/erro/sucesso
-    │       └── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
+    │       ├── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
+    │       └── orcamento-input/     # Input reutilizável de orçamento (cartoletas) com validação
     └── features/
         ├── time/
         │   ├── services/time.service.ts
@@ -202,7 +203,7 @@ Todos os serviços apontam para `/api` (proxiado para `localhost:8080/api` em de
 
 | Serviço | Endpoint |
 |---|---|
-| `TimeService` | `GET /api/time` |
+| `TimeService` | `GET /api/time?orcamento=X` (orçamento opcional) |
 | `RankingService` | `GET /api/ranking?posicao=X&limite=N` |
 | `FavoritosService` | `GET /api/favoritos?oddLimite=X` |
 | `HistoricoService` | `GET /api/historico`, `GET /api/historico/{rodadaId}`, `POST /api/historico/{rodadaId}/atualizar-pontuacao` |
@@ -247,15 +248,16 @@ npm test -- --code-coverage
 | `app.component.spec.ts` | Shell | Navbar, links, router-outlet |
 | `consistencia.util.spec.ts` | Util | Faixas de desvio, badge neutro, tooltip |
 | `consistencia-badge.component.spec.ts` | Shared | Cores por faixa, badge neutro, toggle do tooltip |
+| `orcamento-input.component.spec.ts` | Shared | Validação (>0), limpar, two-way binding, submit no Enter |
 | `error.interceptor.spec.ts` | Core | Status 0, 400, 422, 502, 500, sucesso |
 | `loading-spinner.component.spec.ts` | Shared | message, fullPage, spinner DOM |
 | `alert-banner.component.spec.ts` | Shared | type, icon, classes CSS, message |
-| `time.service.spec.ts` | Service | GET /api/time, dados, desvioPadrao/rodadasConsideradas, erros HTTP |
+| `time.service.spec.ts` | Service | GET /api/time, param orçamento, campos de custo/estratégia, capitão nulo, erros HTTP |
 | `ranking.service.spec.ts` | Service | GET /api/ranking, params posicao/limite, erros |
 | `favoritos.service.spec.ts` | Service | GET /api/favoritos, oddLimite opcional, erros |
 | `player-card.component.spec.ts` | Component | scorePercent, critério do score, captain, dúvida, substituto, valorizacao, badge de consistência |
 | `team-view.component.spec.ts` | Component | Filtros por posição, defensores LAT-ZAG-ZAG-LAT, capitão, reserva luxo |
-| `time-page.component.spec.ts` | Page | Load, erro, métricas calculadas, avisoMercado |
+| `time-page.component.spec.ts` | Page | Load, erro, métricas, avisoMercado, orçamento (validação/barra/estratégia/avisoOrcamento) |
 | `ranking-page.component.spec.ts` | Page | Filtros, scorePercent, critério por posição, ordem da API, badge de consistência, erro, avisoMercado |
 | `favoritos-page.component.spec.ts` | Page | probFavorito, probEmpate, reset, cards DOM |
 | `configuracao.service.spec.ts` | Service | GET /api/config, PATCH, POST reset, erros |

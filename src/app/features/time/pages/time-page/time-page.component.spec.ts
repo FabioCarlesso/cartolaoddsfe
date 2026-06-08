@@ -37,7 +37,13 @@ const mockTime: TimeResponse = {
   reservaLuxo: makeAtleta({ apelido: 'Reserva1', posicao: 'MEI', score: 5.0, preco: 9.0 }),
   alertasDuvida: [],
   avisoMercado: null,
-  rodada: 15
+  rodada: 15,
+  custoTotal: 142.0,
+  orcamentoInformado: null,
+  saldoRestante: null,
+  estrategia: 'SCORE_MAXIMO',
+  formacaoCompleta: true,
+  avisoOrcamento: null
 };
 
 describe('TimePageComponent', () => {
@@ -155,5 +161,105 @@ describe('TimePageComponent', () => {
   it('should call getTime again when load() is called manually', () => {
     component.load();
     expect(mockTimeService.getTime).toHaveBeenCalledTimes(2);
+  });
+
+  it('should pass orcamento to getTime when set', () => {
+    mockTimeService.getTime.calls.reset();
+    component.orcamento = 120;
+    component.load();
+    expect(mockTimeService.getTime).toHaveBeenCalledWith(120);
+  });
+
+  it('should pass null to getTime when orcamento is empty', () => {
+    mockTimeService.getTime.calls.reset();
+    component.orcamento = null;
+    component.load();
+    expect(mockTimeService.getTime).toHaveBeenCalledWith(null);
+  });
+
+  it('should not call getTime when orcamento is invalid', () => {
+    mockTimeService.getTime.calls.reset();
+    component.orcamento = 0;
+    component.load();
+    expect(component.orcamentoInvalido).toBeTrue();
+    expect(mockTimeService.getTime).not.toHaveBeenCalled();
+  });
+
+  it('should flag negative orcamento as invalid', () => {
+    component.orcamento = -5;
+    expect(component.orcamentoInvalido).toBeTrue();
+  });
+
+  it('should clear orcamento via onLimparOrcamento', () => {
+    component.orcamento = 100;
+    component.onLimparOrcamento();
+    expect(component.orcamento).toBeNull();
+  });
+
+  it('should ignore a stored orcamento <= 0 on init', () => {
+    sessionStorage.setItem('time.orcamento', '0');
+    try {
+      const fresh = TestBed.createComponent(TimePageComponent);
+      expect(fresh.componentInstance.orcamento).toBeNull();
+    } finally {
+      sessionStorage.removeItem('time.orcamento');
+    }
+  });
+
+  it('should restore a valid stored orcamento on init', () => {
+    sessionStorage.setItem('time.orcamento', '120');
+    try {
+      const fresh = TestBed.createComponent(TimePageComponent);
+      expect(fresh.componentInstance.orcamento).toBe(120);
+    } finally {
+      sessionStorage.removeItem('time.orcamento');
+    }
+  });
+
+  it('should label estrategia SCORE_MAXIMO', () => {
+    component.time = { ...mockTime, estrategia: 'SCORE_MAXIMO' };
+    expect(component.estrategiaLabel).toContain('Score Máximo');
+  });
+
+  it('should label estrategia CUSTO_BENEFICIO', () => {
+    component.time = { ...mockTime, estrategia: 'CUSTO_BENEFICIO' };
+    expect(component.estrategiaLabel).toContain('Custo-Benefício');
+  });
+
+  it('should expose custoTotal from the API response', () => {
+    component.time = { ...mockTime, custoTotal: 118.3 };
+    expect(component.custoTotal).toBe(118.3);
+  });
+
+  it('should compute budgetPercent from custoTotal and orcamentoInformado', () => {
+    component.time = { ...mockTime, custoTotal: 60, orcamentoInformado: 120, saldoRestante: 60 };
+    expect(component.budgetPercent).toBeCloseTo(50, 1);
+  });
+
+  it('should clamp budgetPercent to 100 when over budget', () => {
+    component.time = { ...mockTime, custoTotal: 150, orcamentoInformado: 120, saldoRestante: -30 };
+    expect(component.budgetPercent).toBeGreaterThan(100);
+    expect(component.budgetPercentClamped).toBe(100);
+  });
+
+  it('should render the budget bar when orcamentoInformado is present', () => {
+    component.time = { ...mockTime, custoTotal: 118.3, orcamentoInformado: 120, saldoRestante: 1.7 };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.budget-bar')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.custo-total-line')).toBeFalsy();
+  });
+
+  it('should render plain custo total line when no orcamento is informed', () => {
+    component.time = { ...mockTime, orcamentoInformado: null };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.budget-bar')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('.custo-total-line')).toBeTruthy();
+  });
+
+  it('should show avisoOrcamento banner when present', () => {
+    component.time = { ...mockTime, avisoOrcamento: 'Orçamento insuficiente.' };
+    fixture.detectChanges();
+    const banners = fixture.nativeElement.querySelectorAll('app-alert-banner');
+    expect(banners.length).toBeGreaterThan(0);
   });
 });

@@ -73,7 +73,12 @@ const rawApiResponse = {
   capitao: rawAtleta,
   reservaLuxo: rawAtleta,
   alertasDuvida: ['* João Pedro (COR) [ZAG] -> Substituto: Alexander (BOT)'],
-  custoTotal: 25.0
+  custoTotal: 25.0,
+  orcamentoInformado: null,
+  saldoRestante: null,
+  estrategia: 'SCORE_MAXIMO',
+  formacaoCompleta: true,
+  avisoOrcamento: null
 };
 
 describe('TimeService', () => {
@@ -99,6 +104,85 @@ describe('TimeService', () => {
     const req = httpMock.expectOne('/api/time');
     expect(req.request.method).toBe('GET');
     req.flush(rawApiResponse);
+  });
+
+  it('should not send orcamento param when none is provided', () => {
+    service.getTime().subscribe();
+    const req = httpMock.expectOne('/api/time');
+    expect(req.request.params.has('orcamento')).toBeFalse();
+    req.flush(rawApiResponse);
+  });
+
+  it('should send orcamento query param when provided', () => {
+    service.getTime(120).subscribe();
+    const req = httpMock.expectOne(r => r.url === '/api/time' && r.params.get('orcamento') === '120');
+    expect(req.request.method).toBe('GET');
+    req.flush(rawApiResponse);
+  });
+
+  it('should not send orcamento param when null is passed', () => {
+    service.getTime(null).subscribe();
+    const req = httpMock.expectOne('/api/time');
+    expect(req.request.params.has('orcamento')).toBeFalse();
+    req.flush(rawApiResponse);
+  });
+
+  it('should map budget fields from the API response', (done) => {
+    const comOrcamento = {
+      ...rawApiResponse,
+      custoTotal: 17.47,
+      orcamentoInformado: 120.0,
+      saldoRestante: 102.53,
+      estrategia: 'CUSTO_BENEFICIO',
+      formacaoCompleta: true,
+      avisoOrcamento: null
+    };
+    service.getTime(120).subscribe((data) => {
+      expect(data.custoTotal).toBe(17.47);
+      expect(data.orcamentoInformado).toBe(120.0);
+      expect(data.saldoRestante).toBe(102.53);
+      expect(data.estrategia).toBe('CUSTO_BENEFICIO');
+      expect(data.formacaoCompleta).toBeTrue();
+      done();
+    });
+    httpMock.expectOne(r => r.url === '/api/time').flush(comOrcamento);
+  });
+
+  it('should default budget fields when the API omits them', (done) => {
+    const semCampos = { ...rawApiResponse };
+    delete (semCampos as any).custoTotal;
+    delete (semCampos as any).estrategia;
+    delete (semCampos as any).formacaoCompleta;
+    service.getTime().subscribe((data) => {
+      expect(data.custoTotal).toBe(0);
+      expect(data.estrategia).toBe('SCORE_MAXIMO');
+      expect(data.formacaoCompleta).toBeTrue();
+      expect(data.orcamentoInformado).toBeNull();
+      done();
+    });
+    httpMock.expectOne('/api/time').flush(semCampos);
+  });
+
+  it('should handle null capitao and reservaLuxo (insufficient budget)', (done) => {
+    const semFormacao = {
+      ...rawApiResponse,
+      titulares: {},
+      capitao: null,
+      reservaLuxo: null,
+      formacaoCompleta: false,
+      orcamentoInformado: 1.0,
+      saldoRestante: 1.0,
+      estrategia: 'CUSTO_BENEFICIO',
+      avisoOrcamento: 'Orcamento de C$1.0 insuficiente para completar a formacao.'
+    };
+    service.getTime(1).subscribe((data) => {
+      expect(data.capitao).toBeNull();
+      expect(data.reservaLuxo).toBeNull();
+      expect(data.formacaoCompleta).toBeFalse();
+      expect(data.avisoOrcamento).toContain('insuficiente');
+      done();
+    });
+    httpMock.expectOne(r => r.url === '/api/time').flush(semFormacao);
   });
 
   it('should flatten titulares from grouped object to array', (done) => {
@@ -193,8 +277,8 @@ describe('TimeService', () => {
 
   it('should map capitao and reservaLuxo', (done) => {
     service.getTime().subscribe((data) => {
-      expect(data.capitao.apelido).toBe('Gabigol');
-      expect(data.reservaLuxo.apelido).toBe('Gabigol');
+      expect(data.capitao!.apelido).toBe('Gabigol');
+      expect(data.reservaLuxo!.apelido).toBe('Gabigol');
       done();
     });
     httpMock.expectOne('/api/time').flush(rawApiResponse);
