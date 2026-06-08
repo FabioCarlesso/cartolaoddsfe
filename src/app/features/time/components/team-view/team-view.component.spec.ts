@@ -35,7 +35,13 @@ const mockTime: TimeResponse = {
   reservaLuxo: ata2,
   alertasDuvida: [],
   avisoMercado: null,
-  rodada: 15
+  rodada: 15,
+  custoTotal: 0,
+  orcamentoInformado: null,
+  saldoRestante: null,
+  estrategia: 'SCORE_MAXIMO',
+  formacaoCompleta: true,
+  avisoOrcamento: null
 };
 
 describe('TeamViewComponent', () => {

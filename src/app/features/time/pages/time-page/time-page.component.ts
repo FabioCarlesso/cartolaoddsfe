@@ -6,6 +6,9 @@ import { TeamViewComponent } from '../../components/team-view/team-view.componen
 import { PlayerCardComponent } from '../../components/player-card/player-card.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
+import { OrcamentoInputComponent } from '../../../../shared/components/orcamento-input/orcamento-input.component';
+
+const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
 
 @Component({
     selector: 'app-time-page',
@@ -14,20 +17,28 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
         TeamViewComponent,
         PlayerCardComponent,
         LoadingSpinnerComponent,
-        AlertBannerComponent
+        AlertBannerComponent,
+        OrcamentoInputComponent
     ],
     template: `
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">&#9917; Time da Rodada</h1>
-        <div class="header-actions">
-          @if (time?.rodada) {
-            <span class="rodada-badge">Rodada {{ time!.rodada }}</span>
-          }
-          <button class="btn btn-secondary" (click)="load()" [disabled]="loading">
-            <span>{{ loading ? 'Carregando...' : '&#8635; Atualizar' }}</span>
+        @if (time?.rodada) {
+          <span class="rodada-badge">Rodada {{ time!.rodada }}</span>
+        }
+      </div>
+
+      <div class="controls-bar">
+        <app-orcamento-input
+          [(orcamento)]="orcamento"
+          (limpar)="onLimparOrcamento()"
+          (submit)="load()"
+        >
+          <button class="btn btn-primary" (click)="load()" [disabled]="loading || orcamentoInvalido">
+            <span>{{ loading ? 'Carregando...' : '&#128260; Gerar Time' }}</span>
           </button>
-        </div>
+        </app-orcamento-input>
       </div>
 
       @if (loading) {
@@ -42,6 +53,10 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
           <app-alert-banner [message]="time.avisoMercado" type="warning" />
         }
 
+        @if (time.avisoOrcamento) {
+          <app-alert-banner [message]="time.avisoOrcamento" type="warning" />
+        }
+
         @if (time.alertasDuvida && time.alertasDuvida.length > 0) {
           <div class="alerts-block">
             @for (alerta of time.alertasDuvida; track alerta) {
@@ -52,7 +67,12 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
 
         <section class="team-section">
           <div class="section-header">
-            <h2 class="section-title">&#128101; Formação 4-3-3</h2>
+            <div class="section-title-group">
+              <h2 class="section-title">&#128101; Formação 4-3-3</h2>
+              <span class="estrategia-badge" [attr.data-estrategia]="time.estrategia">
+                {{ estrategiaLabel }}
+              </span>
+            </div>
             @if (time.capitao) {
               <div class="capitao-info">
                 <span class="capitao-label">Capitão:</span>
@@ -61,6 +81,29 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
               </div>
             }
           </div>
+
+          @if (time.orcamentoInformado != null) {
+            <div class="budget-bar" [class.over]="custoTotal > time.orcamentoInformado">
+              <div class="budget-top">
+                <span class="budget-label">
+                  Custo total: <strong>{{ custoTotal | number:'1.1-1' }}</strong>
+                  / {{ time.orcamentoInformado | number:'1.1-1' }} cartoletas
+                </span>
+                <span class="budget-pct">{{ budgetPercent | number:'1.1-1' }}%</span>
+              </div>
+              <div class="budget-track">
+                <div class="budget-progress" [style.width.%]="budgetPercentClamped"></div>
+              </div>
+              <div class="budget-saldo">
+                Saldo restante: {{ time.saldoRestante | number:'1.1-1' }} cartoletas
+              </div>
+            </div>
+          } @else {
+            <div class="custo-total-line">
+              Custo total: <strong>{{ custoTotal | number:'1.1-1' }}</strong> cartoletas
+            </div>
+          }
+
           <app-team-view [time]="time" />
         </section>
 
@@ -112,8 +155,8 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
           <div class="stat-card">
             <span class="stat-icon">&#128178;</span>
             <div>
-              <div class="stat-val">C$ {{ totalPreco | number:'1.0-0' }}</div>
-              <div class="stat-lbl">Custo estimado</div>
+              <div class="stat-val">C$ {{ custoTotal | number:'1.1-1' }}</div>
+              <div class="stat-lbl">Custo total</div>
             </div>
           </div>
           <div class="stat-card">
@@ -144,6 +187,104 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       border-radius: 9999px;
       font-size: 0.8rem;
       font-weight: 700;
+    }
+
+    .controls-bar {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .estrategia-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.7rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+
+      &[data-estrategia="SCORE_MAXIMO"] {
+        background: rgba(245, 158, 11, 0.12);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+
+      &[data-estrategia="CUSTO_BENEFICIO"] {
+        background: var(--green-light);
+        color: var(--green-primary);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+    }
+
+    .budget-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.875rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .budget-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+
+    .budget-label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+
+      strong { color: var(--text-primary); font-weight: 700; }
+    }
+
+    .budget-pct {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--green-primary);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .budget-track {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .budget-progress {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #10b981);
+      border-radius: 9999px;
+      transition: width 0.6s ease;
+    }
+
+    .budget-saldo {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .budget-bar.over {
+      border-color: rgba(239, 68, 68, 0.4);
+
+      .budget-pct { color: var(--red); }
+      .budget-progress { background: linear-gradient(90deg, #ef4444, #f87171); }
+    }
+
+    .custo-total-line {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+
+      strong { color: var(--text-primary); font-weight: 700; }
     }
 
     .error-state {
@@ -278,15 +419,20 @@ export class TimePageComponent implements OnInit {
   time: TimeResponse | null = null;
   loading = false;
   error = '';
+  orcamento: number | null = this.readStoredOrcamento();
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
+    if (this.orcamentoInvalido) {
+      return;
+    }
+    this.persistOrcamento();
     this.loading = true;
     this.error = '';
-    this.timeService.getTime().subscribe({
+    this.timeService.getTime(this.orcamento).subscribe({
       next: (data) => {
         this.time = data;
         this.loading = false;
@@ -296,6 +442,61 @@ export class TimePageComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  onLimparOrcamento(): void {
+    this.orcamento = null;
+    this.persistOrcamento();
+  }
+
+  get orcamentoInvalido(): boolean {
+    return this.orcamento != null && this.orcamento <= 0;
+  }
+
+  get estrategiaLabel(): string {
+    return this.time?.estrategia === 'CUSTO_BENEFICIO'
+      ? '\u{1F4B0} Custo-Benefício'
+      : '\u{1F3C6} Score Máximo';
+  }
+
+  get custoTotal(): number {
+    if (this.time?.custoTotal != null) {
+      return this.time.custoTotal;
+    }
+    return this.totalPreco;
+  }
+
+  get budgetPercent(): number {
+    const orcamento = this.time?.orcamentoInformado;
+    if (!orcamento) return 0;
+    return (this.custoTotal / orcamento) * 100;
+  }
+
+  get budgetPercentClamped(): number {
+    return Math.min(100, Math.max(0, this.budgetPercent));
+  }
+
+  private readStoredOrcamento(): number | null {
+    try {
+      const stored = sessionStorage.getItem(ORCAMENTO_STORAGE_KEY);
+      if (stored == null || stored === '') return null;
+      const parsed = Number(stored);
+      return Number.isNaN(parsed) ? null : parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  private persistOrcamento(): void {
+    try {
+      if (this.orcamento == null) {
+        sessionStorage.removeItem(ORCAMENTO_STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(ORCAMENTO_STORAGE_KEY, String(this.orcamento));
+      }
+    } catch {
+      // sessionStorage indisponível — persistência é best-effort
+    }
   }
 
   get titularesCount(): number {
