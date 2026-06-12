@@ -59,7 +59,7 @@ describe('RankingPageComponent', () => {
   });
 
   it('should call getRanking with default params', () => {
-    expect(mockRankingService.getRanking).toHaveBeenCalledWith(undefined, 25);
+    expect(mockRankingService.getRanking).toHaveBeenCalledWith(undefined, 25, false);
   });
 
   it('should populate data after load', () => {
@@ -83,13 +83,29 @@ describe('RankingPageComponent', () => {
     component.posicaoSelecionada = 'ATA';
     component.limiteSelecionado = 10;
     component.buscar();
-    expect(mockRankingService.getRanking).toHaveBeenCalledWith('ATA', 10);
+    expect(mockRankingService.getRanking).toHaveBeenCalledWith('ATA', 10, false);
   });
 
   it('should pass undefined for posicao when posicaoSelecionada is empty', () => {
     component.posicaoSelecionada = '';
     component.buscar();
-    expect(mockRankingService.getRanking).toHaveBeenCalledWith(undefined, jasmine.any(Number));
+    expect(mockRankingService.getRanking).toHaveBeenCalledWith(undefined, jasmine.any(Number), false);
+  });
+
+  it('should default excluirDuvida to false', () => {
+    expect(component.excluirDuvida).toBeFalse();
+  });
+
+  it('should pass excluirDuvida when enabled', () => {
+    component.excluirDuvida = true;
+    component.buscar();
+    expect(mockRankingService.getRanking).toHaveBeenCalledWith(undefined, 25, true);
+  });
+
+  it('should render the excluir duvidas checkbox', () => {
+    const checkbox = fixture.nativeElement.querySelector('#excluirDuvida');
+    expect(checkbox).toBeTruthy();
+    expect(checkbox.type).toBe('checkbox');
   });
 
   it('should render table when data is available', () => {

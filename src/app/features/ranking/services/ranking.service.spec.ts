@@ -64,6 +64,29 @@ describe('RankingService', () => {
     req.flush(mockRankingResponse);
   });
 
+  it('should include excluirDuvida=true param when excluirDuvida is true', () => {
+    service.getRanking('MEI', 5, true).subscribe();
+    const req = httpMock.expectOne((r) => r.url === '/api/ranking');
+    expect(req.request.params.get('excluirDuvida')).toBe('true');
+    expect(req.request.params.get('posicao')).toBe('MEI');
+    expect(req.request.params.get('limite')).toBe('5');
+    req.flush(mockRankingResponse);
+  });
+
+  it('should not include excluirDuvida param by default', () => {
+    service.getRanking().subscribe();
+    const req = httpMock.expectOne((r) => r.url === '/api/ranking');
+    expect(req.request.params.has('excluirDuvida')).toBeFalse();
+    req.flush(mockRankingResponse);
+  });
+
+  it('should not include excluirDuvida param when explicitly false', () => {
+    service.getRanking('ATA', 10, false).subscribe();
+    const req = httpMock.expectOne((r) => r.url === '/api/ranking');
+    expect(req.request.params.has('excluirDuvida')).toBeFalse();
+    req.flush(mockRankingResponse);
+  });
+
   it('should return RankingResponse data', (done) => {
     service.getRanking().subscribe((data) => {
       expect(data.atletas.length).toBe(1);

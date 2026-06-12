@@ -47,6 +47,19 @@ interface PosicaoOption {
               <option value="100">100</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label for="excluirDuvida">Status</label>
+            <label class="check-toggle">
+              <input
+                id="excluirDuvida"
+                type="checkbox"
+                [(ngModel)]="excluirDuvida"
+                (change)="buscar()"
+              />
+              <span>Excluir dúvidas</span>
+            </label>
+          </div>
         </div>
 
         <button class="btn btn-secondary" (click)="buscar()" [disabled]="loading">
@@ -202,6 +215,26 @@ interface PosicaoOption {
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.06em;
+      }
+    }
+
+    .check-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      height: 38px;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+
+      input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--green-primary);
+        cursor: pointer;
       }
     }
 
@@ -414,6 +447,7 @@ export class RankingPageComponent implements OnInit {
 
   posicaoSelecionada = '';
   limiteSelecionado = 25;
+  excluirDuvida = false;
 
   posicoes: PosicaoOption[] = [
     { value: '', label: 'Todas as posições' },
@@ -433,7 +467,7 @@ export class RankingPageComponent implements OnInit {
     this.loading = true;
     this.error = '';
     this.rankingService
-      .getRanking(this.posicaoSelecionada || undefined, this.limiteSelecionado)
+      .getRanking(this.posicaoSelecionada || undefined, this.limiteSelecionado, this.excluirDuvida)
       .subscribe({
         next: (data) => {
           this.data = data;
