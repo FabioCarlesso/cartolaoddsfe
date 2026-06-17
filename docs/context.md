@@ -26,6 +26,7 @@ O usuário final quer montar o melhor time possível cruzando:
 | Método | Endpoint | Descrição |
 |---|---|---|
 | GET | `/api/time` | Monta o time ideal da rodada |
+| GET | `/api/time/comparar` | Monta e compara o melhor time entre múltiplas formações |
 | GET | `/api/ranking` | Lista atletas ordenados por score |
 | GET | `/api/favoritos` | Times favoritos por odds da rodada |
 
@@ -34,6 +35,7 @@ O usuário final quer montar o melhor time possível cruzando:
 - `GET /api/ranking?posicao=ATA&limite=25` — filtra por posição e quantidade
 - `GET /api/favoritos?oddLimite=3.0` — customiza o limite de odd para ser considerado favorito
 - Se `oddLimite` não for enviado, o backend usa o valor de `application.properties` (padrão: 3.0)
+- `GET /api/time/comparar?formacoes=4-3-3&formacoes=3-4-3&orcamento=120` — um parâmetro `formacoes` por formação (2 a 5) e `orcamento` opcional; resposta com `melhorFormacao` e `resultados` ordenados por `scoreTotal`
 
 ---
 
@@ -62,10 +64,15 @@ src/app/
 │   │   ├── atleta.model.ts         ← interface Atleta
 │   │   ├── time.model.ts           ← interface TimeResponse
 │   │   ├── ranking.model.ts        ← interface RankingResponse
-│   │   └── favoritos.model.ts      ← interfaces JogoFavorito, JogoDescartado, FavoritosResponse
+│   │   ├── favoritos.model.ts      ← interfaces JogoFavorito, JogoDescartado, FavoritosResponse
+│   │   └── comparacao.model.ts     ← interfaces FormacaoComparada, CompararResponse
+│   ├── utils/
+│   │   ├── time-mapper.util.ts     ← mapAtleta / mapTimeResponse (compartilhado entre time e comparação)
+│   │   └── formacao.util.ts        ← formações válidas + conversão formação → config
 │   └── components/
 │       ├── loading-spinner/        ← spinner com message e fullPage
-│       └── alert-banner/           ← banner tipo warning/error/info/success
+│       ├── alert-banner/           ← banner tipo warning/error/info/success
+│       └── orcamento-input/        ← input reutilizável de orçamento (cartoletas)
 └── features/
     ├── time/
     │   ├── services/time.service.ts
@@ -76,9 +83,12 @@ src/app/
     ├── ranking/
     │   ├── services/ranking.service.ts
     │   └── pages/ranking-page/     ← tabela com filtros
-    └── favoritos/
-        ├── services/favoritos.service.ts
-        └── pages/favoritos-page/   ← cards de partida + probabilidades
+    ├── favoritos/
+    │   ├── services/favoritos.service.ts
+    │   └── pages/favoritos-page/   ← cards de partida + probabilidades
+    └── comparacao/
+        ├── services/comparacao.service.ts
+        └── pages/comparacao-page/  ← chips de formação + cards ranqueados + detalhe colapsável
 ```
 
 ---
@@ -170,6 +180,15 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 
 - Identificado comparando `time.reservaLuxo.apelido === atleta.apelido`
 - Tag "⭐ Luxo" no card
+
+### Comparação de Formações (`/comparar`)
+
+- O usuário seleciona de **2 a 5** formações via chips (`FORMACOES_DISPONIVEIS` em `formacao.util.ts`); abaixo de 2 o botão fica desabilitado e acima de 5 os demais chips ficam desabilitados
+- Seleção de formações e orçamento persistem em `sessionStorage` (`comparacao.formacoes`, `comparacao.orcamento`) para sobreviver a uma comparação
+- Cards ranqueados por `scoreTotal` decrescente, com medalhas 🥇🥈🥉 nas 3 primeiras posições e ordinal (`4º`…) nas demais; o primeiro card (`melhorFormacao`) recebe destaque visual
+- Formação sem atletas suficientes (`indisponivel`/`422` por formação) exibe aviso inline no próprio card sem quebrar os demais
+- Detalhe colapsável reusa o `app-team-view` da tela de Time; **apenas um card expandido por vez**
+- "Usar esta formação" é destrutivo: abre modal de confirmação e, ao confirmar, chama `PATCH /api/config` (via `formacaoParaConfig`, que fixa GOL=1, LAT=2, TEC=1 e deriva ZAG = DEF − 2) e redireciona para `/time`
 
 ### Score (normalização visual)
 

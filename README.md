@@ -11,6 +11,7 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 - **Time ideal da rodada** em formação 4-3-3 visual, com orçamento máximo opcional (cartoletas), indicador de estratégia (Score Máximo × Custo-Benefício), custo total e barra de saldo
 - **Ranking de atletas** por score ponderado com filtros por posição, opção de excluir jogadores em dúvida e indicador de consistência (desvio padrão)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
+- **Comparação de formações** que monta o melhor time em até 5 formações ao mesmo tempo, ranqueia por score total e permite aplicar a formação escolhida na configuração global
 - **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
 
 ---
@@ -142,6 +143,7 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/time` | Time ideal com formação 4-3-3 |
 | `/ranking` | Ranking de atletas com filtros |
 | `/favoritos` | Análise de odds e favoritos |
+| `/comparar` | Comparação do melhor time entre múltiplas formações, ranqueadas por score total |
 | `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real |
 | `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) |
 | `/admin` | Configurações de negócio e gerenciamento de cache |
@@ -163,8 +165,8 @@ src/
     │   └── interceptors/
     │       └── error.interceptor.ts # Tratamento global de erros HTTP
     ├── shared/
-    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico)
-    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util
+    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico, Comparacao)
+    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util, time-mapper.util, formacao.util
     │   └── components/
     │       ├── loading-spinner/     # Spinner animado
     │       ├── alert-banner/        # Banners de aviso/erro/sucesso
@@ -183,6 +185,9 @@ src/
         ├── favoritos/
         │   ├── services/favoritos.service.ts
         │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
+        ├── comparacao/
+        │   ├── services/comparacao.service.ts # GET /api/time/comparar
+        │   └── pages/comparacao-page/ # Chips de formação + cards ranqueados + detalhe colapsável
         ├── historico/
         │   ├── services/historico.service.ts # GET lista/detalhe, POST atualizar-pontuacao
         │   └── pages/
@@ -255,6 +260,10 @@ npm test -- --code-coverage
 | `time.service.spec.ts` | Service | GET /api/time, param orçamento, campos de custo/estratégia, capitão nulo, erros HTTP |
 | `ranking.service.spec.ts` | Service | GET /api/ranking, params posicao/limite/excluirDuvida, erros |
 | `favoritos.service.spec.ts` | Service | GET /api/favoritos, oddLimite opcional, erros |
+| `time-mapper.util.spec.ts` | Util | mapAtleta (clube/sinônimos/dúvida/substituto), mapTimeResponse (flatten, defaults) |
+| `formacao.util.spec.ts` | Util | Formações válidas, limites 2–5, conversão formação → config, validação |
+| `comparacao.service.spec.ts` | Service | GET /api/time/comparar, param formacoes/orçamento, ordenação, indisponível, melhorFormacao |
+| `comparacao-page.component.spec.ts` | Page | Chips (2–5), comparar, expandir único, medalhas, modal "Usar formação" + PATCH/redirect, persistência |
 | `player-card.component.spec.ts` | Component | scorePercent, critério do score, captain, dúvida, substituto, valorizacao, badge de consistência |
 | `team-view.component.spec.ts` | Component | Filtros por posição, defensores LAT-ZAG-ZAG-LAT, capitão, reserva luxo |
 | `time-page.component.spec.ts` | Page | Load, erro, métricas, avisoMercado, orçamento (validação/barra/estratégia/avisoOrcamento) |
