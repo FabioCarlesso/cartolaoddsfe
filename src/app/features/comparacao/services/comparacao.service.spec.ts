@@ -83,6 +83,49 @@ describe('ComparacaoService', () => {
     });
   });
 
+  it('should map the team from the nested time object (real backend shape)', (done) => {
+    service.comparar(['4-3-3', '3-4-3']).subscribe((data) => {
+      const first = data.resultados.find((r) => r.formacao === '4-3-3')!;
+      expect(first.indisponivel).toBeFalse();
+      expect(first.time).not.toBeNull();
+      expect(first.time!.titulares.length).toBe(1);
+      // capitão no nível do resultado vem como string; usamos o objeto de time.capitao.
+      expect(first.capitao!.apelido).toBe('Kauê');
+      expect(first.capitao!.clube).toBe('Corinthians');
+      expect(first.custoTotal).toBe(134.94);
+      done();
+    });
+    httpMock.expectOne((r) => r.url === '/api/time/comparar').flush({
+      melhorFormacao: '4-3-3',
+      resultados: [
+        {
+          formacao: '4-3-3',
+          scoreTotal: 94.3,
+          custoTotal: 134.94,
+          capitao: 'Kauê (COR) ⚠️ DÚVIDA',
+          time: {
+            titulares: { ATA: [{ apelido: 'Hulk', posicao: 'ATA', nomeClube: 'Atlético-MG' }] },
+            reservas: {},
+            capitao: { apelido: 'Kauê', posicao: 'GOL', nomeClube: 'Corinthians' },
+            custoTotal: 134.94,
+          },
+        },
+        {
+          formacao: '3-4-3',
+          scoreTotal: 91.7,
+          custoTotal: 120,
+          capitao: 'Outro (FLA)',
+          time: {
+            titulares: { ATA: [{ apelido: 'X', posicao: 'ATA' }] },
+            reservas: {},
+            capitao: { apelido: 'Outro', posicao: 'ATA', nomeClube: 'Flamengo' },
+            custoTotal: 120,
+          },
+        },
+      ],
+    });
+  });
+
   it('should flag a formation as indisponível and push it to the bottom', (done) => {
     service.comparar(['4-3-3', '4-5-1']).subscribe((data) => {
       const indisp = data.resultados[data.resultados.length - 1];

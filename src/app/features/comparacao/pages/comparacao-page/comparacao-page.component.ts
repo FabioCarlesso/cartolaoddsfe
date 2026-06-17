@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { CompararResponse, FormacaoComparada } from '../../../../shared/models/comparacao.model';
+import { CompararResponse } from '../../../../shared/models/comparacao.model';
 import { ComparacaoService } from '../../services/comparacao.service';
 import {
   FORMACOES_DISPONIVEIS,
@@ -69,7 +69,7 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
           (gerar)="comparar()"
         >
           <button class="btn btn-primary" (click)="comparar()" [disabled]="!podeComparar">
-            <span>{{ loading ? 'Comparando...' : '&#9878; Comparar' }}</span>
+            <span>{{ loading ? 'Comparando...' : '⚖ Comparar' }}</span>
           </button>
         </app-orcamento-input>
         @if (selecionadas.length < minFormacoes) {
@@ -85,10 +85,6 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
           <button class="btn btn-primary" (click)="comparar()">Tentar novamente</button>
         </div>
       } @else if (resultado) {
-        @if (sucesso) {
-          <app-alert-banner [message]="sucesso" type="success" />
-        }
-
         @if (resultado.resultados.length === 0) {
           <app-alert-banner message="Nenhuma formação retornada para comparação." type="info" />
         } @else {
@@ -96,7 +92,7 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
             @for (r of resultado.resultados; track r.formacao; let i = $index) {
               <article
                 class="result-card"
-                [class.best]="i === 0 && !r.indisponivel"
+                [class.best]="r.formacao === resultado.melhorFormacao && !r.indisponivel"
                 [class.unavailable]="r.indisponivel"
               >
                 <header class="card-head">
@@ -175,8 +171,14 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
 
     @if (confirmarFormacao) {
       <div class="modal-overlay" (click)="cancelarUsar()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <h2 class="modal-title">Alterar formação global</h2>
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 class="modal-title" id="modal-title">Alterar formação global</h2>
           <p class="modal-text">
             Isso altera a configuração global para a formação
             <strong>{{ confirmarFormacao }}</strong> e afeta a tela de Time. Deseja continuar?
@@ -483,7 +485,6 @@ export class ComparacaoPageComponent {
   confirmarFormacao: string | null = null;
   aplicando = false;
   aplicarErro = '';
-  sucesso = '';
 
   isSelecionada(formacao: string): boolean {
     return this.selecionadas.includes(formacao);
@@ -521,7 +522,6 @@ export class ComparacaoPageComponent {
     this.persistOrcamento();
     this.loading = true;
     this.error = '';
-    this.sucesso = '';
     this.expandida = null;
     this.comparacaoService.comparar(this.selecionadas, this.orcamento).subscribe({
       next: (data) => {
@@ -586,7 +586,6 @@ export class ComparacaoPageComponent {
       next: () => {
         this.aplicando = false;
         this.confirmarFormacao = null;
-        this.sucesso = `Formação ${formacao} aplicada com sucesso.`;
         this.router.navigate(['/time']);
       },
       error: (err) => {

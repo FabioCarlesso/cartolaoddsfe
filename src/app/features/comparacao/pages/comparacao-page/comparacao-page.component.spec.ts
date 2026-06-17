@@ -158,7 +158,6 @@ describe('ComparacaoPageComponent', () => {
     );
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/time']);
     expect(component.confirmarFormacao).toBeNull();
-    expect(component.sucesso).toContain('4-3-3');
   });
 
   it('should keep the modal open and show an error when the patch fails', () => {

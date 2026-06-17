@@ -48,7 +48,10 @@ export class ComparacaoService {
   }
 
   private mapResultado(r: any): FormacaoComparada {
-    const semTitulares = !r?.titulares || Object.keys(r.titulares).length === 0;
+    // A escalação completa vem aninhada em `r.time` (mesmo formato de `/api/time`).
+    // Toleramos também o formato achatado (titulares direto em `r`) por robustez.
+    const rawTime = r?.time ?? r;
+    const semTitulares = !rawTime?.titulares || Object.keys(rawTime.titulares).length === 0;
     const indisponivel = r?.indisponivel === true || semTitulares;
     const aviso =
       r?.aviso ??
@@ -56,13 +59,19 @@ export class ComparacaoService {
       r?.erro ??
       (indisponivel ? 'Atletas insuficientes para esta formação.' : null);
 
-    const time = indisponivel ? null : mapTimeResponse(r);
+    const time = indisponivel ? null : mapTimeResponse(rawTime);
+
+    // O `capitao` no nível do resultado pode vir como string (ex.: "Kauê (COR) ⚠️ DÚVIDA").
+    // Preferimos o objeto `time.capitao`; só mapeamos o nível do resultado se for objeto.
+    const capitao =
+      time?.capitao ??
+      (r?.capitao && typeof r.capitao === 'object' ? mapAtleta(r.capitao) : null);
 
     return {
       formacao: r?.formacao,
       scoreTotal: r?.scoreTotal ?? 0,
       custoTotal: r?.custoTotal ?? time?.custoTotal ?? 0,
-      capitao: r?.capitao ? mapAtleta(r.capitao) : (time?.capitao ?? null),
+      capitao,
       time,
       indisponivel,
       aviso,
