@@ -28,6 +28,13 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'comparar',
+    loadComponent: () =>
+      import('./features/comparacao/pages/comparacao-page/comparacao-page.component').then(
+        (m) => m.ComparacaoPageComponent
+      )
+  },
+  {
     path: 'historico',
     loadComponent: () =>
       import('./features/historico/pages/historico-page/historico-page.component').then(
