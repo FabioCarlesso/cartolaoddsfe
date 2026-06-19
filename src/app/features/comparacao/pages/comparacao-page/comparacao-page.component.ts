@@ -111,6 +111,9 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
                     type="warning"
                   />
                 } @else {
+                  @if (r.composicaoAviso) {
+                    <app-alert-banner [message]="r.composicaoAviso" type="warning" />
+                  }
                   <div class="card-meta">
                     @if (r.capitao) {
                       <div class="meta-line">

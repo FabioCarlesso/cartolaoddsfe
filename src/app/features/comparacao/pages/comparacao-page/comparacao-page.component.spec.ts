@@ -22,6 +22,7 @@ const mockResposta: CompararResponse = {
       },
       indisponivel: false,
       aviso: null,
+      composicaoAviso: null,
     },
     {
       formacao: '3-4-3',
@@ -36,6 +37,7 @@ const mockResposta: CompararResponse = {
       },
       indisponivel: false,
       aviso: null,
+      composicaoAviso: null,
     },
   ],
 };
@@ -124,6 +126,26 @@ describe('ComparacaoPageComponent', () => {
     component.comparar();
     expect(component.error).toBe('Falhou');
     expect(component.resultado).toBeNull();
+  });
+
+  it('should render the composition warning banner when composicaoAviso is set', () => {
+    const comAviso: CompararResponse = {
+      melhorFormacao: '4-3-3',
+      resultados: [
+        {
+          ...mockResposta.resultados[0],
+          composicaoAviso: 'Composição divergente da formação 4-3-3: ZAG 4 (esperado 2).',
+        },
+      ],
+    };
+    mockComparacao.comparar.and.returnValue(of(comAviso));
+    component.toggleFormacao('4-3-3');
+    component.toggleFormacao('3-4-3');
+    component.comparar();
+    fixture.detectChanges();
+
+    const banner = fixture.nativeElement.querySelector('app-alert-banner');
+    expect(banner?.textContent).toContain('Composição divergente');
   });
 
   it('should expand only one card at a time', () => {

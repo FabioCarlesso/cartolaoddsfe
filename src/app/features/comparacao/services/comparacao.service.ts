@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CompararResponse, FormacaoComparada } from '../../../shared/models/comparacao.model';
 import { mapAtleta, mapTimeResponse } from '../../../shared/utils/time-mapper.util';
+import { validarComposicao } from '../../../shared/utils/formacao.util';
 
 @Injectable({ providedIn: 'root' })
 export class ComparacaoService {
@@ -61,6 +62,10 @@ export class ComparacaoService {
 
     const time = indisponivel ? null : mapTimeResponse(rawTime);
 
+    // Salvaguarda contra regressões do backend (cartolaoddsapi#31): avisa quando
+    // a composição retornada não corresponde à formação selecionada.
+    const composicaoAviso = time ? validarComposicao(r?.formacao, time.titulares) : null;
+
     // O `capitao` no nível do resultado pode vir como string (ex.: "Kauê (COR) ⚠️ DÚVIDA").
     // Preferimos o objeto `time.capitao`; só mapeamos o nível do resultado se for objeto.
     const capitao =
@@ -75,6 +80,7 @@ export class ComparacaoService {
       time,
       indisponivel,
       aviso,
+      composicaoAviso,
     };
   }
 }
