@@ -189,7 +189,7 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 - Formação sem atletas suficientes (`indisponivel`/`422` por formação) exibe aviso inline no próprio card sem quebrar os demais
 - Detalhe colapsável reusa o `app-team-view` da tela de Time; **apenas um card expandido por vez**
 - "Usar esta formação" é destrutivo: abre modal de confirmação e, ao confirmar, chama `PATCH /api/config` (via `formacaoParaConfig`, que fixa GOL=1, LAT=2, TEC=1 e deriva ZAG = DEF − 2) e redireciona para `/time`
-- **Salvaguarda de composição** (`validarComposicao` em `formacao.util.ts`): compara a contagem de titulares por posição retornada pelo backend com a composição esperada da formação; havendo divergência, o card exibe um aviso `warning`. Defesa contra regressões do backend (cartolaoddsapi#31), em que `/api/time/comparar` chegou a inflar os defensores (ex.: 4-3-3 com ZAG=4) em relação ao que `formacaoParaConfig` aplica. Formação não reconhecida → sem aviso (degradação graciosa)
+- **Salvaguarda de composição** (`validarComposicao` em `formacao.util.ts`): compara a contagem de titulares retornada pelo backend com a composição esperada da formação, **agrupando laterais + zagueiros no total de defensores (`DEF`)** — assim uma variação legítima do split LAT/ZAG (com total correto) não gera aviso, só a inflação do total importa. Havendo divergência (ou posição não reconhecida), o card exibe um aviso `warning`. Defesa contra regressões do backend (cartolaoddsapi#31), em que `/api/time/comparar` chegou a inflar os defensores (ex.: 4-3-3 com ZAG=4 → DEF=6). Formação não reconhecida → sem aviso (degradação graciosa)
 
 ### Score (normalização visual)
 

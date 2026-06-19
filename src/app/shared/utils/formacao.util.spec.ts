@@ -110,16 +110,27 @@ describe('formacao.util', () => {
     });
 
     it('should flag the inflated defenders regression of cartolaoddsapi#31', () => {
-      // 4-3-3 esperado ZAG=2; backend devolve ZAG=4 e 14 titulares.
+      // 4-3-3 esperado DEF=4; backend devolve ZAG=4 (DEF=6) e 14 titulares.
       const aviso = validarComposicao(
         '4-3-3',
         titulares({ GOL: 1, LAT: 2, ZAG: 4, MEI: 3, ATA: 3, TEC: 1 }),
       );
       expect(aviso).toContain('4-3-3');
-      expect(aviso).toContain('ZAG 4 (esperado 2)');
+      expect(aviso).toContain('DEF 6 (esperado 4)');
     });
 
-    it('should list every divergent position', () => {
+    it('should not flag a different LAT/ZAG split when the defender total matches', () => {
+      // 4-3-3 esperado DEF=4 (LAT=2+ZAG=2); um split 1/3 mantém o total → sem aviso.
+      expect(
+        validarComposicao('4-3-3', titulares({ GOL: 1, LAT: 1, ZAG: 3, MEI: 3, ATA: 3, TEC: 1 })),
+      ).toBeNull();
+      // Mesmo sem laterais, desde que o total de defensores bata.
+      expect(
+        validarComposicao('4-3-3', titulares({ GOL: 1, ZAG: 4, MEI: 3, ATA: 3, TEC: 1 })),
+      ).toBeNull();
+    });
+
+    it('should list every divergent group', () => {
       const aviso = validarComposicao(
         '4-3-3',
         titulares({ GOL: 1, LAT: 2, ZAG: 2, MEI: 4, ATA: 4, TEC: 1 }),
@@ -134,6 +145,12 @@ describe('formacao.util', () => {
         titulares({ GOL: 1, LAT: 2, ZAG: 2, MEI: 3, ATA: 3 }),
       );
       expect(aviso).toContain('TEC 0 (esperado 1)');
+    });
+
+    it('should flag an unrecognized position returned by the backend', () => {
+      const lista = [...titulares(composicaoExata('4-3-3')), { posicao: 'XYZ' }];
+      const aviso = validarComposicao('4-3-3', lista);
+      expect(aviso).toContain('posição não reconhecida: XYZ');
     });
 
     it('should ignore titulares without a posicao', () => {

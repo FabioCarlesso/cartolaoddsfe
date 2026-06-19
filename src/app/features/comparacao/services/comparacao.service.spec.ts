@@ -204,7 +204,7 @@ describe('ComparacaoService', () => {
 
   it('should flag composicaoAviso when the backend inflates defenders (cartolaoddsapi#31)', (done) => {
     service.comparar(['4-3-3']).subscribe((data) => {
-      expect(data.resultados[0].composicaoAviso).toContain('ZAG 4 (esperado 2)');
+      expect(data.resultados[0].composicaoAviso).toContain('DEF 6 (esperado 4)');
       done();
     });
     httpMock.expectOne((r) => r.url === '/api/time/comparar').flush({

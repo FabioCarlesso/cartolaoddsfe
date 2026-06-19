@@ -55,9 +55,6 @@ export interface ComposicaoEsperada {
   TEC: number;
 }
 
-/** Posições de uma escalação, na ordem de exibição em campo. */
-const POSICOES: (keyof ComposicaoEsperada)[] = ['GOL', 'LAT', 'ZAG', 'MEI', 'ATA', 'TEC'];
-
 /**
  * Deriva a composição de titulares esperada para uma formação, reaproveitando
  * a mesma regra do `formacaoParaConfig` (GOL=1, LAT=2, ZAG=DEF−2, TEC=1).
@@ -77,13 +74,33 @@ export function composicaoEsperada(formacao: string): ComposicaoEsperada {
 }
 
 /**
+ * Grupos comparados pela salvaguarda de composição, na ordem de exibição.
+ * Laterais e zagueiros são agrupados em `DEF`: a formação é definida pelo total
+ * de defensores (`DEF-MEI-ATA`), então uma variação legítima do split LAT/ZAG
+ * (com o total correto) não deve gerar aviso — só a inflação do total importa.
+ */
+const GRUPOS = ['GOL', 'DEF', 'MEI', 'ATA', 'TEC'] as const;
+type Grupo = (typeof GRUPOS)[number];
+
+/** Mapeia cada posição da API para o grupo correspondente. */
+const POSICAO_GRUPO: Record<string, Grupo> = {
+  GOL: 'GOL',
+  LAT: 'DEF',
+  ZAG: 'DEF',
+  MEI: 'MEI',
+  ATA: 'ATA',
+  TEC: 'TEC',
+};
+
+/**
  * Salvaguarda defensiva (ver cartolaoddsapi#31): compara a contagem de titulares
- * por posição retornada pelo backend com a composição esperada da `formacao`.
+ * retornada pelo backend com a composição esperada da `formacao`, agrupando
+ * laterais e zagueiros no total de defensores (`DEF`).
  *
  * O frontend renderiza fielmente o que recebe; quando a composição diverge da
  * formação selecionada, o preview pode não corresponder ao que será efetivamente
  * aplicado em "Usar esta formação". Esta função produz a mensagem de aviso nesse
- * caso.
+ * caso, incluindo posições não reconhecidas eventualmente retornadas.
  *
  * @returns mensagem descritiva quando há divergência; `null` quando a composição
  *   confere ou quando a formação não é reconhecida (degradação graciosa).
@@ -92,28 +109,46 @@ export function validarComposicao(
   formacao: string,
   titulares: { posicao?: string }[],
 ): string | null {
-  let esperada: ComposicaoEsperada;
+  let esperadaPosicao: ComposicaoEsperada;
   try {
-    esperada = composicaoEsperada(formacao);
+    esperadaPosicao = composicaoEsperada(formacao);
   } catch {
     return null;
   }
 
-  const contagem: Record<string, number> = {};
+  const esperada: Record<Grupo, number> = {
+    GOL: esperadaPosicao.GOL,
+    DEF: esperadaPosicao.LAT + esperadaPosicao.ZAG,
+    MEI: esperadaPosicao.MEI,
+    ATA: esperadaPosicao.ATA,
+    TEC: esperadaPosicao.TEC,
+  };
+
+  const contagem: Record<Grupo, number> = { GOL: 0, DEF: 0, MEI: 0, ATA: 0, TEC: 0 };
+  const posicoesDesconhecidas = new Set<string>();
   for (const t of titulares) {
     const pos = t.posicao;
-    if (pos) {
-      contagem[pos] = (contagem[pos] ?? 0) + 1;
+    if (!pos) {
+      continue;
+    }
+    const grupo = POSICAO_GRUPO[pos];
+    if (grupo) {
+      contagem[grupo] += 1;
+    } else {
+      posicoesDesconhecidas.add(pos);
     }
   }
 
-  const divergencias = POSICOES.filter((pos) => (contagem[pos] ?? 0) !== esperada[pos]);
+  const divergencias = GRUPOS.filter((g) => contagem[g] !== esperada[g]).map(
+    (g) => `${g} ${contagem[g]} (esperado ${esperada[g]})`,
+  );
+  for (const pos of posicoesDesconhecidas) {
+    divergencias.push(`posição não reconhecida: ${pos}`);
+  }
+
   if (divergencias.length === 0) {
     return null;
   }
 
-  const detalhes = divergencias
-    .map((pos) => `${pos} ${contagem[pos] ?? 0} (esperado ${esperada[pos]})`)
-    .join(', ');
-  return `Composição divergente da formação ${formacao}: ${detalhes}. O preview pode não corresponder ao que será aplicado.`;
+  return `Composição divergente da formação ${formacao}: ${divergencias.join(', ')}. O preview pode não corresponder ao que será aplicado.`;
 }
