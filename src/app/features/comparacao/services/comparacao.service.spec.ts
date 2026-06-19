@@ -165,4 +165,96 @@ describe('ComparacaoService', () => {
       resultados: [rawResultado('3-4-3', 91.7), rawResultado('4-3-3', 94.3)],
     });
   });
+
+  it('should not flag composicaoAviso when the returned composition matches the formation', (done) => {
+    service.comparar(['4-3-3']).subscribe((data) => {
+      expect(data.resultados[0].composicaoAviso).toBeNull();
+      done();
+    });
+    httpMock.expectOne((r) => r.url === '/api/time/comparar').flush({
+      melhorFormacao: '4-3-3',
+      resultados: [
+        {
+          formacao: '4-3-3',
+          scoreTotal: 94.3,
+          custoTotal: 120,
+          time: {
+            titulares: {
+              GOL: [{ apelido: 'Cássio', posicao: 'GOL' }],
+              LAT: [{ apelido: 'L1', posicao: 'LAT' }, { apelido: 'L2', posicao: 'LAT' }],
+              ZAG: [{ apelido: 'Z1', posicao: 'ZAG' }, { apelido: 'Z2', posicao: 'ZAG' }],
+              MEI: [
+                { apelido: 'M1', posicao: 'MEI' },
+                { apelido: 'M2', posicao: 'MEI' },
+                { apelido: 'M3', posicao: 'MEI' },
+              ],
+              ATA: [
+                { apelido: 'A1', posicao: 'ATA' },
+                { apelido: 'A2', posicao: 'ATA' },
+                { apelido: 'A3', posicao: 'ATA' },
+              ],
+              TEC: [{ apelido: 'T1', posicao: 'TEC' }],
+            },
+            reservas: {},
+          },
+        },
+      ],
+    });
+  });
+
+  it('should flag composicaoAviso when the backend inflates defenders (cartolaoddsapi#31)', (done) => {
+    service.comparar(['4-3-3']).subscribe((data) => {
+      expect(data.resultados[0].composicaoAviso).toContain('ZAG 4 (esperado 2)');
+      done();
+    });
+    httpMock.expectOne((r) => r.url === '/api/time/comparar').flush({
+      melhorFormacao: '4-3-3',
+      resultados: [
+        {
+          formacao: '4-3-3',
+          scoreTotal: 94.3,
+          custoTotal: 120,
+          time: {
+            titulares: {
+              GOL: [{ apelido: 'Cássio', posicao: 'GOL' }],
+              LAT: [{ apelido: 'L1', posicao: 'LAT' }, { apelido: 'L2', posicao: 'LAT' }],
+              ZAG: [
+                { apelido: 'Z1', posicao: 'ZAG' },
+                { apelido: 'Z2', posicao: 'ZAG' },
+                { apelido: 'Z3', posicao: 'ZAG' },
+                { apelido: 'Z4', posicao: 'ZAG' },
+              ],
+              MEI: [
+                { apelido: 'M1', posicao: 'MEI' },
+                { apelido: 'M2', posicao: 'MEI' },
+                { apelido: 'M3', posicao: 'MEI' },
+              ],
+              ATA: [
+                { apelido: 'A1', posicao: 'ATA' },
+                { apelido: 'A2', posicao: 'ATA' },
+                { apelido: 'A3', posicao: 'ATA' },
+              ],
+              TEC: [{ apelido: 'T1', posicao: 'TEC' }],
+            },
+            reservas: {},
+          },
+        },
+      ],
+    });
+  });
+
+  it('should leave composicaoAviso null for indisponível formations', (done) => {
+    service.comparar(['4-3-3', '4-5-1']).subscribe((data) => {
+      const indisp = data.resultados.find((r) => r.formacao === '4-5-1')!;
+      expect(indisp.composicaoAviso).toBeNull();
+      done();
+    });
+    httpMock.expectOne((r) => r.url === '/api/time/comparar').flush({
+      melhorFormacao: '4-3-3',
+      resultados: [
+        { formacao: '4-5-1', indisponivel: true, aviso: 'Atletas insuficientes para esta formação.' },
+        rawResultado('4-3-3', 94.3),
+      ],
+    });
+  });
 });

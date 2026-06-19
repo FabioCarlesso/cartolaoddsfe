@@ -23,6 +23,12 @@ export interface FormacaoComparada {
   indisponivel: boolean;
   /** Mensagem de aviso inline quando `indisponivel` é `true`. */
   aviso: string | null;
+  /**
+   * Salvaguarda contra regressões do backend (cartolaoddsapi#31): mensagem de
+   * aviso quando a composição retornada não corresponde à formação selecionada;
+   * `null` quando a composição confere.
+   */
+  composicaoAviso: string | null;
 }
 
 /** Resposta de `GET /api/time/comparar`. */

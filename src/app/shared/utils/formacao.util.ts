@@ -44,3 +44,76 @@ export function formacaoParaConfig(formacao: string): ConfiguracaoRequest {
     formacaoTec: 1,
   };
 }
+
+/** Composição de titulares esperada por posição para uma formação. */
+export interface ComposicaoEsperada {
+  GOL: number;
+  LAT: number;
+  ZAG: number;
+  MEI: number;
+  ATA: number;
+  TEC: number;
+}
+
+/** Posições de uma escalação, na ordem de exibição em campo. */
+const POSICOES: (keyof ComposicaoEsperada)[] = ['GOL', 'LAT', 'ZAG', 'MEI', 'ATA', 'TEC'];
+
+/**
+ * Deriva a composição de titulares esperada para uma formação, reaproveitando
+ * a mesma regra do `formacaoParaConfig` (GOL=1, LAT=2, ZAG=DEF−2, TEC=1).
+ *
+ * @throws {Error} se a formação for inválida (propagado de `formacaoParaConfig`).
+ */
+export function composicaoEsperada(formacao: string): ComposicaoEsperada {
+  const cfg = formacaoParaConfig(formacao);
+  return {
+    GOL: cfg.formacaoGol!,
+    LAT: cfg.formacaoLat!,
+    ZAG: cfg.formacaoZag!,
+    MEI: cfg.formacaoMei!,
+    ATA: cfg.formacaoAta!,
+    TEC: cfg.formacaoTec!,
+  };
+}
+
+/**
+ * Salvaguarda defensiva (ver cartolaoddsapi#31): compara a contagem de titulares
+ * por posição retornada pelo backend com a composição esperada da `formacao`.
+ *
+ * O frontend renderiza fielmente o que recebe; quando a composição diverge da
+ * formação selecionada, o preview pode não corresponder ao que será efetivamente
+ * aplicado em "Usar esta formação". Esta função produz a mensagem de aviso nesse
+ * caso.
+ *
+ * @returns mensagem descritiva quando há divergência; `null` quando a composição
+ *   confere ou quando a formação não é reconhecida (degradação graciosa).
+ */
+export function validarComposicao(
+  formacao: string,
+  titulares: { posicao?: string }[],
+): string | null {
+  let esperada: ComposicaoEsperada;
+  try {
+    esperada = composicaoEsperada(formacao);
+  } catch {
+    return null;
+  }
+
+  const contagem: Record<string, number> = {};
+  for (const t of titulares) {
+    const pos = t.posicao;
+    if (pos) {
+      contagem[pos] = (contagem[pos] ?? 0) + 1;
+    }
+  }
+
+  const divergencias = POSICOES.filter((pos) => (contagem[pos] ?? 0) !== esperada[pos]);
+  if (divergencias.length === 0) {
+    return null;
+  }
+
+  const detalhes = divergencias
+    .map((pos) => `${pos} ${contagem[pos] ?? 0} (esperado ${esperada[pos]})`)
+    .join(', ');
+  return `Composição divergente da formação ${formacao}: ${detalhes}. O preview pode não corresponder ao que será aplicado.`;
+}
