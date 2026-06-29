@@ -69,7 +69,11 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
           <div class="section-header">
             <div class="section-title-group">
               <h2 class="section-title">&#128101; Formação 4-3-3</h2>
-              <span class="estrategia-badge" [attr.data-estrategia]="time.estrategia">
+              <span
+                class="estrategia-badge"
+                [attr.data-estrategia]="time.estrategia"
+                [title]="estrategiaTooltip"
+              >
                 {{ estrategiaLabel }}
               </span>
             </div>
@@ -96,6 +100,9 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
               </div>
               <div class="budget-saldo">
                 Saldo restante: {{ time.saldoRestante | number:'1.1-1' }} cartoletas
+              </div>
+              <div class="budget-note">
+                &#127942; Maior score possível dentro do orçamento.
               </div>
             </div>
           } @else {
@@ -207,12 +214,6 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
         color: #fbbf24;
         border: 1px solid rgba(245, 158, 11, 0.3);
       }
-
-      &[data-estrategia="CUSTO_BENEFICIO"] {
-        background: var(--green-light);
-        color: var(--green-primary);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-      }
     }
 
     .budget-bar {
@@ -264,6 +265,13 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
       margin-top: 0.5rem;
       font-size: 0.8rem;
       color: var(--text-muted);
+    }
+
+    .budget-note {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
     }
 
     .budget-bar.over {
@@ -448,9 +456,13 @@ export class TimePageComponent implements OnInit {
   }
 
   get estrategiaLabel(): string {
-    return this.time?.estrategia === 'CUSTO_BENEFICIO'
-      ? '\u{1F4B0} Custo-Benefício'
-      : '\u{1F3C6} Score Máximo';
+    return '\u{1F3C6} Score Máximo';
+  }
+
+  get estrategiaTooltip(): string {
+    return this.time?.orcamentoInformado != null
+      ? 'Maior score possível dentro do orçamento'
+      : 'Time de maior score possível';
   }
 
   get custoTotal(): number {

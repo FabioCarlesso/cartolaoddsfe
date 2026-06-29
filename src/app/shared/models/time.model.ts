@@ -1,6 +1,6 @@
 import { Atleta } from './atleta.model';
 
-export type EstrategiaTime = 'SCORE_MAXIMO' | 'CUSTO_BENEFICIO';
+export type EstrategiaTime = 'SCORE_MAXIMO';
 
 export interface TimeResponse {
   titulares: Atleta[];

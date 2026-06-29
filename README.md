@@ -8,7 +8,7 @@
 
 Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso) e apresenta:
 
-- **Time ideal da rodada** em formação 4-3-3 visual, com orçamento máximo opcional (cartoletas), indicador de estratégia (Score Máximo × Custo-Benefício), custo total e barra de saldo
+- **Time ideal da rodada** em formação 4-3-3 visual, com orçamento máximo opcional (cartoletas) — o time é sempre o de maior score, e quando há orçamento, o maior score possível dentro do teto — custo total e barra de saldo
 - **Ranking de atletas** por score ponderado com filtros por posição, opção de excluir jogadores em dúvida e indicador de consistência (desvio padrão)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
 - **Comparação de formações** que monta o melhor time em até 5 formações ao mesmo tempo, ranqueia por score total e permite aplicar a formação escolhida na configuração global

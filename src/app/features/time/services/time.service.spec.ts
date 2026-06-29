@@ -133,7 +133,7 @@ describe('TimeService', () => {
       custoTotal: 17.47,
       orcamentoInformado: 120.0,
       saldoRestante: 102.53,
-      estrategia: 'CUSTO_BENEFICIO',
+      estrategia: 'SCORE_MAXIMO',
       formacaoCompleta: true,
       avisoOrcamento: null
     };
@@ -141,7 +141,7 @@ describe('TimeService', () => {
       expect(data.custoTotal).toBe(17.47);
       expect(data.orcamentoInformado).toBe(120.0);
       expect(data.saldoRestante).toBe(102.53);
-      expect(data.estrategia).toBe('CUSTO_BENEFICIO');
+      expect(data.estrategia).toBe('SCORE_MAXIMO');
       expect(data.formacaoCompleta).toBeTrue();
       done();
     });
@@ -172,7 +172,7 @@ describe('TimeService', () => {
       formacaoCompleta: false,
       orcamentoInformado: 1.0,
       saldoRestante: 1.0,
-      estrategia: 'CUSTO_BENEFICIO',
+      estrategia: 'SCORE_MAXIMO',
       avisoOrcamento: 'Orcamento de C$1.0 insuficiente para completar a formacao.'
     };
     service.getTime(1).subscribe((data) => {
