@@ -216,14 +216,25 @@ describe('TimePageComponent', () => {
     }
   });
 
-  it('should label estrategia SCORE_MAXIMO', () => {
+  it('should always label estrategia as Score Máximo', () => {
     component.time = { ...mockTime, estrategia: 'SCORE_MAXIMO' };
     expect(component.estrategiaLabel).toContain('Score Máximo');
   });
 
-  it('should label estrategia CUSTO_BENEFICIO', () => {
-    component.time = { ...mockTime, estrategia: 'CUSTO_BENEFICIO' };
-    expect(component.estrategiaLabel).toContain('Custo-Benefício');
+  it('should describe score máximo within budget on the tooltip when orcamento is informed', () => {
+    component.time = { ...mockTime, orcamentoInformado: 120, saldoRestante: 1.7 };
+    expect(component.estrategiaTooltip).toContain('dentro do orçamento');
+  });
+
+  it('should describe plain score máximo on the tooltip when no orcamento is informed', () => {
+    component.time = { ...mockTime, orcamentoInformado: null };
+    expect(component.estrategiaTooltip).not.toContain('dentro do orçamento');
+  });
+
+  it('should render the budget note when orcamentoInformado is present', () => {
+    component.time = { ...mockTime, custoTotal: 118.3, orcamentoInformado: 120, saldoRestante: 1.7 };
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.budget-note')).toBeTruthy();
   });
 
   it('should expose custoTotal from the API response', () => {
