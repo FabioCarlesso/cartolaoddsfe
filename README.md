@@ -279,3 +279,9 @@ npm test -- --code-coverage
 
 - [`docs/documentacao.md`](./docs/documentacao.md) — documentação técnica completa do frontend
 - [`docs/context.md`](./docs/context.md) — contexto do projeto para desenvolvimento assistido por IA
+
+---
+
+## Licença
+
+Distribuído sob a licença MIT. Veja [`LICENSE`](./LICENSE) para o texto completo.
