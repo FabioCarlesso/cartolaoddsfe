@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -71,10 +72,34 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
-    canActivate: [authGuard],
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
     loadComponent: () =>
       import('./features/admin/pages/admin-page/admin-page.component').then(
         (m) => m.AdminPageComponent
+      )
+  },
+  {
+    path: 'usuarios',
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./features/usuarios/pages/usuarios-page/usuarios-page.component').then(
+        (m) => m.UsuariosPageComponent
+      )
+  },
+  {
+    path: 'usuarios/novo',
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./features/usuarios/pages/usuario-form-page/usuario-form-page.component').then(
+        (m) => m.UsuarioFormPageComponent
+      )
+  },
+  {
+    path: 'usuarios/:id',
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./features/usuarios/pages/usuario-form-page/usuario-form-page.component').then(
+        (m) => m.UsuarioFormPageComponent
       )
   },
   {

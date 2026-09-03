@@ -95,6 +95,19 @@ describe('errorInterceptor', () => {
     );
   });
 
+  it('should use the backend mensagem for 409 Conflict', (done) => {
+    http.delete('/api/usuarios/1').subscribe({
+      error: (err) => {
+        expect(err.userMessage).toBe('Nao e possivel desativar o ultimo administrador ativo.');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/usuarios/1').flush(
+      { mensagem: 'Nao e possivel desativar o ultimo administrador ativo.' },
+      { status: 409, statusText: 'Conflict' }
+    );
+  });
+
   it('should use the backend mensagem for 429 Too Many Requests', (done) => {
     http.post('/api/auth/login', {}).subscribe({
       error: (err) => {

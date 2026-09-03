@@ -19,11 +19,12 @@
 10. [Feature: Ranking](#10-feature-ranking)
 11. [Feature: Favoritos](#11-feature-favoritos)
 12. [Feature: Admin (Config + Cache)](#12-feature-admin-config--cache)
-13. [Design System](#13-design-system)
-14. [Proxy de Desenvolvimento](#14-proxy-de-desenvolvimento)
-15. [Build e Deploy](#15-build-e-deploy)
-16. [Docker](#16-docker)
-17. [Testes](#17-testes)
+13. [Feature: Usuários](#13-feature-usuários)
+14. [Design System](#14-design-system)
+15. [Proxy de Desenvolvimento](#15-proxy-de-desenvolvimento)
+16. [Build e Deploy](#16-build-e-deploy)
+17. [Docker](#17-docker)
+18. [Testes](#18-testes)
 
 ---
 
@@ -115,7 +116,10 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 | `/comparar` | `ComparacaoPageComponent` | `authGuard` |
 | `/historico` | `HistoricoPageComponent` | `authGuard` |
 | `/historico/:rodadaId` | `HistoricoDetalhePageComponent` | `authGuard` |
-| `/admin` | `AdminPageComponent` | `authGuard` |
+| `/admin` | `AdminPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
+| `/usuarios` | `UsuariosPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
+| `/usuarios/novo` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
+| `/usuarios/:id` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/alterar-senha` | `AlterarSenhaPageComponent` | `authGuard` |
 | `**` | Redireciona para `/time` | — |
 
@@ -182,6 +186,15 @@ Barra as rotas internas e guarda a URL pretendida em `?redirect=`, para devolver
 ela após o login. A tela de login só aceita destinos internos: um `redirect` absoluto ou
 iniciado por `//` é ignorado, para que a rota não vire trampolim para outro domínio.
 
+### `core/guards/role.guard.ts`
+
+`roleGuard(perfis)` restringe a rota aos perfis informados: sem sessão manda para `/login`
+(guardando o `redirect`), e com sessão de perfil errado manda para `/403`.
+
+Isto é defesa de **experiência**, não de segurança: quem editar o `localStorage` chega à
+tela, mas a API recusa a operação. A autorização real é sempre a do `SecurityConfig` no
+backend.
+
 ### `features/auth/pages/`
 
 | Página | Rota | Papel |
@@ -193,7 +206,8 @@ iniciado por `//` é ignorado, para que a rota não vire trampolim para outro do
 ### Shell
 
 O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
-(atalho para `/alterar-senha`) e o botão **Sair**.
+(atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config" e "Usuários" só aparecem
+para o perfil `ADMIN`.
 
 ---
 
@@ -222,6 +236,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 | `400` | Requisição inválida (usa `error.mensagem` do backend) |
 | `401` | `E-mail ou senha inválidos.` no login; `Sessão expirada. Entre novamente.` nas demais chamadas |
 | `403` | `Você não tem permissão para esta ação.` |
+| `409` | Conflito de regra (usa `error.mensagem`: e-mail repetido, último administrador ativo) |
 | `422` | Pool vazio — ODD_LIMITE restritivo ou sem API Key (usa `error.mensagem` quando presente) |
 | `429` | Freio de força bruta do backend (usa `error.mensagem`, que informa quanto falta) |
 | `502` | Falha na API externa (Cartola FC ou Odds API) |
@@ -650,7 +665,73 @@ interface CacheResponse {
 
 ---
 
-## 13. Design System  
+## 13. Feature: Usuários
+
+Tela de administração dos acessos, restrita a `ADMIN`. Sem ela, criar um acesso exigiria
+`curl` ou o Swagger — que fica desabilitado em produção.
+
+### Estrutura
+
+```
+core/models/usuario.model.ts              ← Usuario, UsuarioRequest, UsuarioUpdateRequest, Pagina<T>
+features/usuarios/
+├── services/usuario.service.ts           ← /api/usuarios
+└── pages/
+    ├── usuarios-page/                    ← listagem + ativar/desativar
+    └── usuario-form-page/                ← criação e edição
+```
+
+### `UsuarioService`
+
+| Método | Chamada |
+|---|---|
+| `listar()` | `GET /api/usuarios?size=100&sort=nome` |
+| `buscarPorId(id)` | `GET /api/usuarios/{id}` |
+| `criar(request)` | `POST /api/usuarios` |
+| `atualizar(id, request)` | `PATCH /api/usuarios/{id}` |
+| `desativar(id)` | `DELETE /api/usuarios/{id}` (desativa; o cadastro permanece) |
+| `ativar(id)` | `PATCH /api/usuarios/{id}` com `{ ativo: true }` |
+
+A API pagina em 20 por padrão, mas esta é uma aplicação pessoal com um punhado de acessos:
+pedir 100 de uma vez evita construir uma paginação que nunca teria segunda página. O
+`totalElementos` do envelope continua exibido, então o dia em que a lista passar disso a tela
+mostra a diferença.
+
+### `UsuariosPageComponent`
+
+Tabela com nome, e-mail, perfil, situação e data de cadastro; a linha do próprio usuário
+logado é marcada. Cada linha oferece **Editar** e **Desativar** (ou **Ativar**, se já estiver
+inativo).
+
+A desativação passa por um modal de confirmação — mesma preocupação da issue #28 sobre
+invalidar cache sem confirmar. A reativação não confirma nada: é a ação que devolve acesso, não
+a que tira.
+
+### `UsuarioFormPageComponent`
+
+O mesmo componente atende `/usuarios/novo` e `/usuarios/:id`. A senha só existe na criação:
+o `PATCH` da API não a aceita, e o próprio usuário a troca em `/alterar-senha`. Nenhuma senha
+é exibida em tela alguma, nem na listagem nem na edição.
+
+Na edição, o `PATCH` leva **apenas os campos que mudaram** — a API trata campo ausente como
+"deixe como está".
+
+### Tratamento do `409`
+
+| Situação | Mensagem exibida |
+|---|---|
+| Criar com e-mail existente | `E-mail já cadastrado.` |
+| Editar para um e-mail existente | `E-mail já cadastrado.` |
+| Rebaixar/desativar a própria conta de ADMIN | Mensagem da API |
+| Rebaixar/desativar o último ADMIN ativo | Mensagem da API |
+
+O `409` da criação só tem uma causa possível, então vira texto fixo. Na edição e na
+desativação ele também pode vir das regras de administrador, e aí a mensagem da API é mais
+informativa do que qualquer texto fixo do frontend.
+
+---
+
+## 14. Design System  
 
 Definido em `src/styles.scss` via CSS custom properties:
 
@@ -695,7 +776,7 @@ Definido em `src/styles.scss` via CSS custom properties:
 
 ---
 
-## 14. Proxy de Desenvolvimento
+## 15. Proxy de Desenvolvimento
 
 Arquivo: `proxy.conf.json`
 
@@ -713,7 +794,7 @@ Ativo automaticamente com `npm start` (`ng serve --proxy-config proxy.conf.json`
 
 ---
 
-## 15. Build e Deploy
+## 16. Build e Deploy
 
 ### Comandos
 
@@ -741,7 +822,7 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 
 ---
 
-## 16. Docker
+## 17. Docker
 
 ### Arquivos
 
@@ -840,7 +921,7 @@ O container nginx consome muito menos recursos que o backend Java — 128 MB é 
 
 ---
 
-## 17. Testes
+## 18. Testes
 
 ### Stack de Testes
 
@@ -874,16 +955,20 @@ mockTimeService.getTime.and.returnValue(of(mockTime));
 
 **Interceptors** — usam `HttpClient` real com o interceptor registrado via `withInterceptors([...])`: o `errorInterceptor` é verificado pelo campo `userMessage` nos erros, e o `authInterceptor` pelo header `Authorization` da requisição e pelo efeito colateral no `AuthService` e no `Router`.
 
-**Guardas** — executadas com `TestBed.runInInjectionContext`, comparando o `UrlTree` devolvido com a rota esperada.
+**Guardas** — executadas com `TestBed.runInInjectionContext`, comparando o `UrlTree` devolvido com a rota esperada. O `roleGuard` é chamado já parametrizado: `roleGuard(['ADMIN'])(route, state)`.
 
 ### Cobertura dos Testes
 
 | Arquivo de Teste | Cenários cobertos |
 |---|---|
-| `app.component.spec.ts` | Criação, navbar, links, usuário logado, botão Sair, navegação escondida sem sessão |
+| `app.component.spec.ts` | Criação, navbar, links por perfil (Config e Usuários só para ADMIN), usuário logado, botão Sair, navegação escondida sem sessão |
 | `auth.service.spec.ts` | Login, claims do token, restauração da sessão, token expirado/sem `perfil`/malformado, logout, sessão expirada, storage indisponível, troca de senha |
 | `auth.interceptor.spec.ts` | Header presente/ausente, login sem header, `401` deslogando, `403` mantendo a sessão, demais status |
 | `auth.guard.spec.ts` | Sessão válida, sem sessão (com e sem `redirect`), token expirado |
+| `role.guard.spec.ts` | ADMIN permitido, USER para `/403`, múltiplos perfis aceitos, visitante e sessão expirada para `/login` |
+| `usuario.service.spec.ts` | Listagem paginada e ordenada, busca por id, criação, `PATCH` parcial, desativar, reativar, `409` de e-mail e de último ADMIN |
+| `usuarios-page.component.spec.ts` | Listagem, colunas, ausência de senha, confirmação antes de desativar, cancelamento, `409` do último ADMIN, reativação, erro de carga, estado vazio |
+| `usuario-form-page.component.spec.ts` | Validação de e-mail e senha mínima, criação, edição sem campo de senha, `PATCH` só do que mudou, `409` de e-mail e das regras de ADMIN, erro de carga |
 | `login-page.component.spec.ts` | Submissão válida, credencial inválida, estado de carregamento, aviso de sessão expirada, `redirect` interno e externo |
 | `forbidden-page.component.spec.ts` | Mensagem de acesso restrito e volta para `/time` |
 | `alterar-senha-page.component.spec.ts` | Senhas divergentes, senha curta, sucesso encerrando a sessão, `422` de senha atual incorreta |

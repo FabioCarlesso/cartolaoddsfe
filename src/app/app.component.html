@@ -37,17 +37,24 @@
             <span>Histórico</span>
           </a>
         </li>
-        <li>
-          <a routerLink="/admin" routerLinkActive="active">
-            <span class="nav-icon">&#9881;</span>
-            <span>Config</span>
-          </a>
-        </li>
+        @if (admin()) {
+          <li>
+            <a routerLink="/admin" routerLinkActive="active">
+              <span class="nav-icon">&#9881;</span>
+              <span>Config</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/usuarios" routerLinkActive="active">
+              <span class="nav-icon">&#128100;</span>
+              <span>Usuários</span>
+            </a>
+          </li>
+        }
       </ul>
 
       <div class="nav-user">
         <a class="user-name" routerLink="/alterar-senha" title="Trocar senha">
-          <span class="nav-icon">&#128100;</span>
           <span>{{ usuario()?.nome }}</span>
         </a>
         <button type="button" class="btn btn-ghost btn-sair" (click)="sair()">Sair</button>

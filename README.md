@@ -13,6 +13,7 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
 - **Comparação de formações** que monta o melhor time em até 5 formações ao mesmo tempo, ranqueia por score total e permite aplicar a formação escolhida na configuração global
 - **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
+- **Gestão de usuários** restrita a administradores, para criar acessos, trocar perfil e ativar/desativar contas
 
 O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend guarda a sessão, envia o token em cada chamada e reage à expiração. Os usuários são criados por um administrador — não há auto-cadastro.
 
@@ -150,10 +151,13 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/comparar` | Comparação do melhor time entre múltiplas formações, ranqueadas por score total | Autenticado |
 | `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real | Autenticado |
 | `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) | Autenticado |
-| `/admin` | Configurações de negócio e gerenciamento de cache | Autenticado |
+| `/admin` | Configurações de negócio e gerenciamento de cache | **ADMIN** |
+| `/usuarios` | Listagem de usuários com ações de editar e ativar/desativar | **ADMIN** |
+| `/usuarios/novo` | Cadastro de usuário | **ADMIN** |
+| `/usuarios/:id` | Edição de usuário | **ADMIN** |
 | `/alterar-senha` | Troca da própria senha | Autenticado |
 
-As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretendida em `?redirect=` e devolve o usuário a ela depois do login.
+As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretendida em `?redirect=` e devolve o usuário a ela depois do login. As de ADMIN somam o `roleGuard(['ADMIN'])`, que leva a `/403` quem não tem o perfil — defesa de experiência, já que a autorização real é a do backend. Os itens "Config" e "Usuários" também só aparecem no menu para ADMIN.
 
 ---
 
@@ -171,7 +175,9 @@ src/
     ├── core/
     │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
     │   ├── services/auth.service.ts # Sessão em signals, token no localStorage
+    │   ├── models/usuario.model.ts  # Usuario, requests e envelope de paginação
     │   ├── guards/auth.guard.ts     # Protege as rotas internas
+    │   ├── guards/role.guard.ts     # Restringe rotas por perfil (→ /403)
     │   └── interceptors/
     │       ├── auth.interceptor.ts  # Authorization: Bearer + logout no 401
     │       └── error.interceptor.ts # Tratamento global de erros HTTP
@@ -189,6 +195,11 @@ src/
         │       ├── login-page/          # Formulário de login
         │       ├── forbidden-page/      # Aviso de acesso restrito (/403)
         │       └── alterar-senha-page/  # Troca da própria senha
+        ├── usuarios/
+        │   ├── services/usuario.service.ts   # CRUD de /api/usuarios
+        │   └── pages/
+        │       ├── usuarios-page/            # Listagem + ativar/desativar com confirmação
+        │       └── usuario-form-page/        # Criação e edição
         ├── time/
         │   ├── services/time.service.ts
         │   ├── components/
@@ -227,6 +238,7 @@ Toda chamada a `/api/**` sai com `Authorization: Bearer <token>`, exceto o próp
 | Serviço | Endpoint |
 |---|---|
 | `AuthService` | `POST /api/auth/login`, `PATCH /api/usuarios/me/senha` |
+| `UsuarioService` | `GET/POST /api/usuarios`, `GET/PATCH/DELETE /api/usuarios/{id}` (restrito a ADMIN) |
 | `TimeService` | `GET /api/time?orcamento=X` (orçamento opcional) |
 | `RankingService` | `GET /api/ranking?posicao=X&limite=N&excluirDuvida=true` (excluirDuvida opcional) |
 | `FavoritosService` | `GET /api/favoritos?oddLimite=X` |
@@ -269,17 +281,21 @@ npm test -- --code-coverage
 
 | Arquivo de teste | Camada | Cenários |
 |---|---|---|
-| `app.component.spec.ts` | Shell | Navbar, links, usuário logado, sair, navegação escondida sem sessão |
+| `app.component.spec.ts` | Shell | Navbar, links por perfil, usuário logado, sair, navegação escondida sem sessão |
 | `auth.service.spec.ts` | Core | Login, restauração da sessão, token expirado/sem perfil/malformado, logout, storage indisponível |
 | `auth.interceptor.spec.ts` | Core | Header presente/ausente, login sem header, 401 desloga, 403 mantém sessão |
 | `auth.guard.spec.ts` | Core | Sessão válida, sem sessão (com `redirect`), token expirado |
+| `role.guard.spec.ts` | Core | ADMIN permitido, USER para `/403`, visitante e sessão expirada para `/login` |
+| `usuario.service.spec.ts` | Service | Listagem paginada, busca, criação, PATCH parcial, desativar/ativar, `409` |
+| `usuarios-page.component.spec.ts` | Page | Listagem, situação, confirmação antes de desativar, `409` do último ADMIN, reativação, estado vazio |
+| `usuario-form-page.component.spec.ts` | Page | Validações, criação, edição sem senha, PATCH só do que mudou, `409` de e-mail e das regras de ADMIN |
 | `login-page.component.spec.ts` | Page | Submissão válida, credencial inválida, carregando, sessão expirada, `redirect` interno e externo |
 | `forbidden-page.component.spec.ts` | Page | Mensagem de acesso restrito e volta para `/time` |
 | `alterar-senha-page.component.spec.ts` | Page | Senhas divergentes, senha curta, sucesso encerrando a sessão, 422 |
 | `consistencia.util.spec.ts` | Util | Faixas de desvio, badge neutro, tooltip |
 | `consistencia-badge.component.spec.ts` | Shared | Cores por faixa, badge neutro, toggle do tooltip |
 | `orcamento-input.component.spec.ts` | Shared | Validação (>0), limpar, two-way binding, submit no Enter |
-| `error.interceptor.spec.ts` | Core | Status 0, 400, 401 (login e sessão), 403, 422, 429, 502, 500, sucesso |
+| `error.interceptor.spec.ts` | Core | Status 0, 400, 401 (login e sessão), 403, 409, 422, 429, 502, 500, sucesso |
 | `loading-spinner.component.spec.ts` | Shared | message, fullPage, spinner DOM |
 | `alert-banner.component.spec.ts` | Shared | type, icon, classes CSS, message |
 | `time.service.spec.ts` | Service | GET /api/time, param orçamento, campos de custo/estratégia, capitão nulo, erros HTTP |

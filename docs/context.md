@@ -29,6 +29,8 @@ Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/aut
 |---|---|---|
 | POST | `/api/auth/login` | Autentica e devolve o access token JWT (único endpoint público) |
 | PATCH | `/api/usuarios/me/senha` | Troca a senha do usuário autenticado (invalida o token atual) |
+| GET/POST | `/api/usuarios` | Lista (paginada) e cria usuários — restrito a ADMIN |
+| GET/PATCH/DELETE | `/api/usuarios/{id}` | Busca, atualiza e desativa um usuário — restrito a ADMIN |
 | GET | `/api/time` | Monta o time ideal da rodada |
 | GET | `/api/time/comparar` | Monta e compara o melhor time entre múltiplas formações |
 | GET | `/api/ranking` | Lista atletas ordenados por score |
@@ -65,7 +67,9 @@ src/app/
 ├── core/
 │   ├── models/auth.model.ts                 ← Perfil, LoginRequest/Response, SessaoUsuario
 │   ├── services/auth.service.ts             ← sessão em signals; token é a fonte de verdade
+│   ├── models/usuario.model.ts              ← Usuario, requests e Pagina<T>
 │   ├── guards/auth.guard.ts                 ← protege as rotas internas, guarda ?redirect=
+│   ├── guards/role.guard.ts                 ← restringe rota por perfil (→ /403)
 │   └── interceptors/
 │       ├── auth.interceptor.ts              ← Authorization: Bearer + logout no 401
 │       └── error.interceptor.ts             ← mapeia erros HTTP → mensagens PT-BR
@@ -89,6 +93,11 @@ src/app/
     │       ├── login-page/         ← formulário reativo de login
     │       ├── forbidden-page/     ← aviso de acesso restrito (/403)
     │       └── alterar-senha-page/ ← troca da própria senha
+    ├── usuarios/
+    │   ├── services/usuario.service.ts
+    │   └── pages/
+    │       ├── usuarios-page/       ← listagem + ativar/desativar com confirmação
+    │       └── usuario-form-page/   ← criação e edição (senha só na criação)
     ├── time/
     │   ├── services/time.service.ts
     │   ├── components/
@@ -166,7 +175,10 @@ limpa tudo e o usuário volta ao `/login`.
 
 Guardas de rota são defesa de **experiência**, não de segurança: quem editar o
 `localStorage` vê a tela, mas a API recusa a operação. A autorização real é sempre a do
-backend.
+backend. O mesmo vale para esconder itens do menu por perfil.
+
+Nenhuma senha aparece em tela — nem na listagem de usuários, nem na edição. O `PATCH` de
+usuário não a aceita; quem troca a própria senha usa `/alterar-senha`.
 
 ---
 
