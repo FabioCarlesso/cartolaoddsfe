@@ -21,7 +21,8 @@ describe('AppComponent', () => {
     usuarioAtual = signal<SessaoUsuario | null>(usuario);
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['logout'], {
       usuarioAtual: usuarioAtual.asReadonly(),
-      autenticado: signal(usuario !== null).asReadonly()
+      autenticado: signal(usuario !== null).asReadonly(),
+      perfilAtual: signal(usuario?.perfil ?? null).asReadonly()
     } as Partial<AuthService>);
 
     await TestBed.configureTestingModule({
@@ -44,9 +45,26 @@ describe('AppComponent', () => {
     expect(fixture.nativeElement.querySelector('.navbar')).toBeTruthy();
   });
 
-  it('should render navigation links when authenticated', async () => {
+  it('should render every navigation link for an ADMIN', async () => {
     const fixture = await montar(sessao);
-    expect(fixture.nativeElement.querySelectorAll('.nav-links a').length).toBe(6);
+    const textos = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.nav-links a')).map(
+      (a) => a.textContent
+    );
+
+    expect(textos.length).toBe(7);
+    expect(textos.some((t) => t?.includes('Config'))).toBeTrue();
+    expect(textos.some((t) => t?.includes('Usuários'))).toBeTrue();
+  });
+
+  it('should hide Config and Usuários from a USER', async () => {
+    const fixture = await montar({ ...sessao, perfil: 'USER' });
+    const textos = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.nav-links a')).map(
+      (a) => a.textContent
+    );
+
+    expect(textos.length).toBe(5);
+    expect(textos.some((t) => t?.includes('Config'))).toBeFalse();
+    expect(textos.some((t) => t?.includes('Usuários'))).toBeFalse();
   });
 
   it('should render the logged user name', async () => {
