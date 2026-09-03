@@ -56,6 +56,58 @@ describe('errorInterceptor', () => {
     );
   });
 
+  it('should add userMessage for 401 outside the login request', (done) => {
+    http.get('/api/time').subscribe({
+      error: (err) => {
+        expect(err.userMessage).toBe('Sessão expirada. Entre novamente.');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/time').flush(
+      { mensagem: 'Autenticacao necessaria para acessar este recurso.' },
+      { status: 401, statusText: 'Unauthorized' }
+    );
+  });
+
+  it('should add a credentials userMessage for 401 on the login request', (done) => {
+    http.post('/api/auth/login', {}).subscribe({
+      error: (err) => {
+        expect(err.userMessage).toBe('E-mail ou senha inválidos.');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/auth/login').flush(
+      { mensagem: 'Credenciais invalidas.' },
+      { status: 401, statusText: 'Unauthorized' }
+    );
+  });
+
+  it('should add userMessage for 403 Forbidden', (done) => {
+    http.patch('/api/config', {}).subscribe({
+      error: (err) => {
+        expect(err.userMessage).toBe('Você não tem permissão para esta ação.');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/config').flush(
+      { mensagem: 'Voce nao tem permissao para acessar este recurso.' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+  });
+
+  it('should use the backend mensagem for 429 Too Many Requests', (done) => {
+    http.post('/api/auth/login', {}).subscribe({
+      error: (err) => {
+        expect(err.userMessage).toContain('Tente novamente em 5 minutos.');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/auth/login').flush(
+      { mensagem: 'Muitas tentativas de login. Tente novamente em 5 minutos.' },
+      { status: 429, statusText: 'Too Many Requests' }
+    );
+  });
+
   it('should add userMessage for 422 Unprocessable Entity', (done) => {
     http.get('/api/test').subscribe({
       error: (err) => {

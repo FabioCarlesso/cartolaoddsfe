@@ -10,19 +10,20 @@
 1. [Arquitetura](#1-arquitetura)
 2. [Configuração e Bootstrap](#2-configuração-e-bootstrap)
 3. [Roteamento](#3-roteamento)
-4. [Interceptor de Erros](#4-interceptor-de-erros)
-5. [Modelos de Dados](#5-modelos-de-dados)
-6. [Serviços HTTP](#6-serviços-http)
-7. [Componentes Compartilhados](#7-componentes-compartilhados)
-8. [Feature: Time](#8-feature-time)
-9. [Feature: Ranking](#9-feature-ranking)
-10. [Feature: Favoritos](#10-feature-favoritos)
-11. [Feature: Admin (Config + Cache)](#11-feature-admin-config--cache)
-12. [Design System](#12-design-system)
-13. [Proxy de Desenvolvimento](#13-proxy-de-desenvolvimento)
-14. [Build e Deploy](#14-build-e-deploy)
-15. [Docker](#15-docker)
-16. [Testes](#16-testes)
+4. [Autenticação e Sessão](#4-autenticação-e-sessão)
+5. [Interceptor de Erros](#5-interceptor-de-erros)
+6. [Modelos de Dados](#6-modelos-de-dados)
+7. [Serviços HTTP](#7-serviços-http)
+8. [Componentes Compartilhados](#8-componentes-compartilhados)
+9. [Feature: Time](#9-feature-time)
+10. [Feature: Ranking](#10-feature-ranking)
+11. [Feature: Favoritos](#11-feature-favoritos)
+12. [Feature: Admin (Config + Cache)](#12-feature-admin-config--cache)
+13. [Design System](#13-design-system)
+14. [Proxy de Desenvolvimento](#14-proxy-de-desenvolvimento)
+15. [Build e Deploy](#15-build-e-deploy)
+16. [Docker](#16-docker)
+17. [Testes](#17-testes)
 
 ---
 
@@ -32,9 +33,10 @@ O projeto segue o padrão **Feature-based com Standalone Components** do Angular
 
 ```
 app/
-├── core/           # Infraestrutura transversal (interceptors)
+├── core/           # Infraestrutura transversal (auth, guards, interceptors)
 ├── shared/         # Modelos e componentes reutilizáveis
 └── features/       # Domínios de negócio isolados
+    ├── auth/       # Login, acesso restrito e troca de senha
     ├── time/
     ├── ranking/
     ├── favoritos/
@@ -72,7 +74,7 @@ Registra os providers globais:
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([errorInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimations()
   ]
 };
@@ -81,8 +83,10 @@ export const appConfig: ApplicationConfig = {
 | Provider | Função |
 |---|---|
 | `provideRouter` | Habilita roteamento com input binding |
-| `provideHttpClient` | HTTP com interceptor funcional |
+| `provideHttpClient` | HTTP com os interceptors funcionais, na ordem de execução |
 | `provideAnimations` | Suporte a animações Angular |
+
+A ordem do array de `withInterceptors` é a ordem de execução: o `authInterceptor` vem antes do `errorInterceptor` para tratar o `401` de sessão expirada antes da tradução genérica de mensagem.
 
 ---
 
@@ -100,18 +104,100 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 }
 ```
 
-| Path | Componente carregado |
-|---|---|
-| `/` | Redireciona para `/time` |
-| `/time` | `TimePageComponent` |
-| `/ranking` | `RankingPageComponent` |
-| `/favoritos` | `FavoritosPageComponent` |
-| `/admin` | `AdminPageComponent` |
-| `**` | Redireciona para `/time` |
+| Path | Componente carregado | Guarda |
+|---|---|---|
+| `/` | Redireciona para `/time` | — |
+| `/login` | `LoginPageComponent` | — |
+| `/403` | `ForbiddenPageComponent` | — |
+| `/time` | `TimePageComponent` | `authGuard` |
+| `/ranking` | `RankingPageComponent` | `authGuard` |
+| `/favoritos` | `FavoritosPageComponent` | `authGuard` |
+| `/comparar` | `ComparacaoPageComponent` | `authGuard` |
+| `/historico` | `HistoricoPageComponent` | `authGuard` |
+| `/historico/:rodadaId` | `HistoricoDetalhePageComponent` | `authGuard` |
+| `/admin` | `AdminPageComponent` | `authGuard` |
+| `/alterar-senha` | `AlterarSenhaPageComponent` | `authGuard` |
+| `**` | Redireciona para `/time` | — |
 
 ---
 
-## 4. Interceptor de Erros
+## 4. Autenticação e Sessão
+
+A API exige JWT em todos os endpoints, com uma única exceção pública: `POST /api/auth/login`.
+Os usuários são criados por um administrador — não existe auto-cadastro.
+
+### `core/models/auth.model.ts`
+
+| Tipo | Conteúdo |
+|---|---|
+| `Perfil` | `'ADMIN' \| 'USER'` |
+| `LoginRequest` | `email`, `senha` |
+| `LoginResponse` | `accessToken`, `tipo`, `expiraEmSegundos`, `nome`, `perfil` |
+| `AlterarSenhaRequest` | `senhaAtual`, `novaSenha` |
+| `SessaoUsuario` | `usuarioId`, `email`, `nome`, `perfil` |
+
+### `core/services/auth.service.ts`
+
+O estado da sessão é exposto por signals — `usuarioAtual`, `autenticado` e `perfilAtual` —
+consumidos direto no template do shell.
+
+O **token é a fonte de verdade**: `usuarioId`, `email` e `perfil` saem dos claims do próprio
+JWT (`usuarioId`, `sub` e `perfil`), não de um objeto guardado ao lado dele. Só o `nome` vem
+do corpo do login, porque o token não o carrega; sem ele, o e-mail é exibido no lugar.
+
+Uma sessão só é considerada válida quando o token existe, decodifica, traz um `perfil`
+conhecido e ainda não expirou. A expiração é reconferida a cada `isAuthenticated()` — e não
+apenas no boot — porque o token vence com a aba aberta.
+
+| Método | Comportamento |
+|---|---|
+| `login(request)` | `POST /api/auth/login`, persiste o token e monta a sessão a partir dele |
+| `alterarSenha(request)` | `PATCH /api/usuarios/me/senha` |
+| `logout()` | Limpa a sessão e navega para `/login` |
+| `encerrarSessaoExpirada()` | Limpa a sessão e navega para `/login?expirada=1` |
+| `isAuthenticated()` | Revalida o token (existência, claims e expiração) |
+| `getUsuarioAtual()` / `getPerfilAtual()` / `isAdmin()` | Leitura da sessão corrente |
+
+**Persistência.** Token e nome ficam em `localStorage` (`cartolaodds.accessToken` e
+`cartolaodds.nome`). Todo acesso é protegido: em navegador com storage de site bloqueado a
+leitura lança, e nesse caso a sessão passa a viver em memória — o usuário entra e navega
+normalmente, apenas perde o login ao recarregar a página. A alternativa mais segura seria
+cookie `HttpOnly` + CSRF, descartada aqui pelo custo frente ao perfil de uso (aplicação
+pessoal, sem dados de terceiros).
+
+### `core/interceptors/auth.interceptor.ts`
+
+Adiciona `Authorization: Bearer <token>` em toda requisição, exceto `/api/auth/login`.
+
+No `401` fora do login, encerra a sessão e leva a `/login?expirada=1`. Isso é seguro neste
+backend porque, fora do login, o `401` só nasce do `ErroSegurancaHandler` e sempre pelo mesmo
+motivo — o token não vale mais (ausente, expirado, assinatura inválida, ou revogado por troca
+de senha ou desativação do usuário). Credencial inválida é `401` apenas no login, e senha
+atual errada na troca de senha é `422`. O `403` é permissão insuficiente com sessão válida e,
+por isso, **não** desloga ninguém.
+
+### `core/guards/auth.guard.ts`
+
+Barra as rotas internas e guarda a URL pretendida em `?redirect=`, para devolver o usuário a
+ela após o login. A tela de login só aceita destinos internos: um `redirect` absoluto ou
+iniciado por `//` é ignorado, para que a rota não vire trampolim para outro domínio.
+
+### `features/auth/pages/`
+
+| Página | Rota | Papel |
+|---|---|---|
+| `login-page` | `/login` | Formulário reativo (e-mail e senha), estado de carregamento, erro de credencial e aviso de sessão expirada |
+| `forbidden-page` | `/403` | Aviso de acesso restrito, com volta para `/time` |
+| `alterar-senha-page` | `/alterar-senha` | Troca da própria senha; como o backend invalida o token na operação, o fluxo termina em logout |
+
+### Shell
+
+O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
+(atalho para `/alterar-senha`) e o botão **Sair**.
+
+---
+
+## 5. Interceptor de Erros
 
 Arquivo: `src/app/core/interceptors/error.interceptor.ts`
 
@@ -134,13 +220,16 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 |---|---|
 | `0` | Servidor inacessível — backend não está rodando |
 | `400` | Requisição inválida (usa `error.mensagem` do backend) |
-| `422` | Pool vazio — ODD_LIMITE restritivo ou sem API Key |
+| `401` | `E-mail ou senha inválidos.` no login; `Sessão expirada. Entre novamente.` nas demais chamadas |
+| `403` | `Você não tem permissão para esta ação.` |
+| `422` | Pool vazio — ODD_LIMITE restritivo ou sem API Key (usa `error.mensagem` quando presente) |
+| `429` | Freio de força bruta do backend (usa `error.mensagem`, que informa quanto falta) |
 | `502` | Falha na API externa (Cartola FC ou Odds API) |
 | `5xx` | Erro interno do servidor |
 
 ---
 
-## 5. Modelos de Dados
+## 6. Modelos de Dados
 
 Todos em `src/app/shared/models/`.
 
@@ -223,7 +312,7 @@ interface JogoDescartado {
 
 ---
 
-## 6. Serviços HTTP
+## 7. Serviços HTTP
 
 Todos usam `inject(HttpClient)` e são `providedIn: 'root'`.
 
@@ -285,7 +374,7 @@ Caches disponíveis: `odds`, `atletas`, `clubes`, `partidas`, `pontuados`, `stat
 
 ---
 
-## 7. Componentes Compartilhados
+## 8. Componentes Compartilhados
 
 ### `LoadingSpinnerComponent`
 
@@ -335,7 +424,7 @@ score em cada `PlayerCardComponent`, cobrindo titulares e reservas).
 
 ---
 
-## 8. Feature: Time
+## 9. Feature: Time
 
 ### Estrutura
 
@@ -413,7 +502,7 @@ Gerencia estado local: `loading`, `error`, `time`.
 
 ---
 
-## 9. Feature: Ranking
+## 10. Feature: Ranking
 
 ### `RankingPageComponent`
 
@@ -436,7 +525,7 @@ A tabela exibe para cada atleta:
 
 ---
 
-## 10. Feature: Favoritos
+## 11. Feature: Favoritos
 
 ### `FavoritosPageComponent`
 
@@ -464,7 +553,7 @@ probEmpate(jogo: JogoFavorito): number {
 
 ---
 
-## 11. Feature: Admin (Config + Cache)
+## 12. Feature: Admin (Config + Cache)
 
 ### Estrutura
 
@@ -561,7 +650,7 @@ interface CacheResponse {
 
 ---
 
-## 12. Design System  
+## 13. Design System  
 
 Definido em `src/styles.scss` via CSS custom properties:
 
@@ -606,7 +695,7 @@ Definido em `src/styles.scss` via CSS custom properties:
 
 ---
 
-## 13. Proxy de Desenvolvimento
+## 14. Proxy de Desenvolvimento
 
 Arquivo: `proxy.conf.json`
 
@@ -624,7 +713,7 @@ Ativo automaticamente com `npm start` (`ng serve --proxy-config proxy.conf.json`
 
 ---
 
-## 14. Build e Deploy
+## 15. Build e Deploy
 
 ### Comandos
 
@@ -652,7 +741,7 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 
 ---
 
-## 15. Docker
+## 16. Docker
 
 ### Arquivos
 
@@ -751,7 +840,7 @@ O container nginx consome muito menos recursos que o backend Java — 128 MB é 
 
 ---
 
-## 16. Testes
+## 17. Testes
 
 ### Stack de Testes
 
@@ -783,13 +872,21 @@ mockTimeService = jasmine.createSpyObj('TimeService', ['getTime']);
 mockTimeService.getTime.and.returnValue(of(mockTime));
 ```
 
-**Interceptor** — usa `HttpClient` real com o interceptor registrado via `withInterceptors([errorInterceptor])` e verifica o campo `userMessage` nos erros.
+**Interceptors** — usam `HttpClient` real com o interceptor registrado via `withInterceptors([...])`: o `errorInterceptor` é verificado pelo campo `userMessage` nos erros, e o `authInterceptor` pelo header `Authorization` da requisição e pelo efeito colateral no `AuthService` e no `Router`.
+
+**Guardas** — executadas com `TestBed.runInInjectionContext`, comparando o `UrlTree` devolvido com a rota esperada.
 
 ### Cobertura dos Testes
 
 | Arquivo de Teste | Cenários cobertos |
 |---|---|
-| `app.component.spec.ts` | Criação, navbar, links, router-outlet |
+| `app.component.spec.ts` | Criação, navbar, links, usuário logado, botão Sair, navegação escondida sem sessão |
+| `auth.service.spec.ts` | Login, claims do token, restauração da sessão, token expirado/sem `perfil`/malformado, logout, sessão expirada, storage indisponível, troca de senha |
+| `auth.interceptor.spec.ts` | Header presente/ausente, login sem header, `401` deslogando, `403` mantendo a sessão, demais status |
+| `auth.guard.spec.ts` | Sessão válida, sem sessão (com e sem `redirect`), token expirado |
+| `login-page.component.spec.ts` | Submissão válida, credencial inválida, estado de carregamento, aviso de sessão expirada, `redirect` interno e externo |
+| `forbidden-page.component.spec.ts` | Mensagem de acesso restrito e volta para `/time` |
+| `alterar-senha-page.component.spec.ts` | Senhas divergentes, senha curta, sucesso encerrando a sessão, `422` de senha atual incorreta |
 | `error.interceptor.spec.ts` | Status 0, 400 (com e sem mensagem), 422, 502, 500, resposta de sucesso |
 | `loading-spinner.component.spec.ts` | Spinner DOM, message vazio/preenchido, classe full-page |
 | `alert-banner.component.spec.ts` | Tipos (warning/error/success/info), ícones, classes CSS, message |
