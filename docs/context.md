@@ -23,8 +23,12 @@ O usuário final quer montar o melhor time possível cruzando:
 
 ### Endpoints consumidos
 
+Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/auth/login`.
+
 | Método | Endpoint | Descrição |
 |---|---|---|
+| POST | `/api/auth/login` | Autentica e devolve o access token JWT (único endpoint público) |
+| PATCH | `/api/usuarios/me/senha` | Troca a senha do usuário autenticado (invalida o token atual) |
 | GET | `/api/time` | Monta o time ideal da rodada |
 | GET | `/api/time/comparar` | Monta e compara o melhor time entre múltiplas formações |
 | GET | `/api/ranking` | Lista atletas ordenados por score |
@@ -58,7 +62,13 @@ O usuário final quer montar o melhor time possível cruzando:
 
 ```
 src/app/
-├── core/interceptors/error.interceptor.ts   ← mapeia erros HTTP → mensagens PT-BR
+├── core/
+│   ├── models/auth.model.ts                 ← Perfil, LoginRequest/Response, SessaoUsuario
+│   ├── services/auth.service.ts             ← sessão em signals; token é a fonte de verdade
+│   ├── guards/auth.guard.ts                 ← protege as rotas internas, guarda ?redirect=
+│   └── interceptors/
+│       ├── auth.interceptor.ts              ← Authorization: Bearer + logout no 401
+│       └── error.interceptor.ts             ← mapeia erros HTTP → mensagens PT-BR
 ├── shared/
 │   ├── models/
 │   │   ├── atleta.model.ts         ← interface Atleta
@@ -74,6 +84,11 @@ src/app/
 │       ├── alert-banner/           ← banner tipo warning/error/info/success
 │       └── orcamento-input/        ← input reutilizável de orçamento (cartoletas)
 └── features/
+    ├── auth/
+    │   └── pages/
+    │       ├── login-page/         ← formulário reativo de login
+    │       ├── forbidden-page/     ← aviso de acesso restrito (/403)
+    │       └── alterar-senha-page/ ← troca da própria senha
     ├── time/
     │   ├── services/time.service.ts
     │   ├── components/
@@ -128,7 +143,9 @@ loading = false;
 error = '';
 ```
 
-Sem uso de `BehaviorSubject` ou stores para o escopo atual.
+Sem uso de `BehaviorSubject` ou stores para o escopo atual. A exceção é a sessão: o
+`AuthService` a expõe por `signal`, porque é estado global lido pelo shell, pelas guardas e
+pelo interceptor.
 
 ### Tratamento de erro
 
@@ -140,6 +157,16 @@ error: (err) => {
   this.loading = false;
 }
 ```
+
+### Sessão e autorização
+
+O `perfil` e o `usuarioId` vêm dos claims do JWT, nunca de um objeto guardado à parte. Um
+token sem `perfil` conhecido, ilegível ou expirado não é sessão válida — o `AuthService`
+limpa tudo e o usuário volta ao `/login`.
+
+Guardas de rota são defesa de **experiência**, não de segurança: quem editar o
+`localStorage` vê a tela, mas a API recusa a operação. A autorização real é sempre a do
+backend.
 
 ---
 
