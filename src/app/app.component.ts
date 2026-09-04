@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
 
 @Component({
     selector: 'app-root',
@@ -7,4 +8,14 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })
-export class AppComponent {}
+export class AppComponent {
+  private authService = inject(AuthService);
+
+  readonly autenticado = this.authService.autenticado;
+  readonly usuario = this.authService.usuarioAtual;
+  readonly admin = computed(() => this.authService.perfilAtual() === 'ADMIN');
+
+  sair(): void {
+    this.authService.logout();
+  }
+}
