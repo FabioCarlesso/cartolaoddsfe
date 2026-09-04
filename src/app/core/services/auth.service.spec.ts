@@ -218,4 +218,39 @@ describe('AuthService', () => {
     expect(req.request.body).toEqual({ senhaAtual: 'velha-123', novaSenha: 'nova-senha-456' });
     req.flush(null);
   });
+
+  it('should report a discarded token only once', () => {
+    localStorage.setItem(TOKEN_KEY, tokenExpirado());
+
+    const service = criarService();
+
+    expect(service.consumirTokenDescartado()).toBeTrue();
+    expect(service.consumirTokenDescartado()).toBeFalse();
+  });
+
+  it('should not report a discarded token when there never was one', () => {
+    expect(criarService().consumirTokenDescartado()).toBeFalse();
+  });
+
+  it('should not report a discarded token after a deliberate logout', () => {
+    localStorage.setItem(TOKEN_KEY, tokenValido());
+    const service = criarService();
+
+    service.logout();
+
+    expect(service.consumirTokenDescartado()).toBeFalse();
+  });
+
+  it('should confirm the password change on the login screen', () => {
+    localStorage.setItem(TOKEN_KEY, tokenValido());
+    const service = criarService();
+
+    service.encerrarSessaoAposTrocaDeSenha();
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(service.autenticado()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { senhaAlterada: '1' }
+    });
+  });
 });

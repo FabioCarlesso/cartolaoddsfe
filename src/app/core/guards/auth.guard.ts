@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, Params, Router, RouterStateSnapshot } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -14,7 +14,25 @@ export const authGuard: CanActivateFn = (_route, state) => {
     return true;
   }
 
-  return router.createUrlTree(['/login'], {
-    queryParams: state.url && state.url !== '/' ? { redirect: state.url } : {}
-  });
+  return router.createUrlTree(['/login'], { queryParams: paramsDeLogin(authService, state) });
 };
+
+/**
+ * `redirect` devolve o usuário à rota pretendida; `expirada` só entra quando havia um token
+ * que deixou de valer. Sem ele, quem volta com a sessão vencida cai numa tela de login sem
+ * nenhuma explicação de por que foi desconectado — e esse é o caminho mais comum, já que o
+ * guard percebe o vencimento antes de qualquer chamada à API tomar 401.
+ */
+export function paramsDeLogin(authService: AuthService, state: RouterStateSnapshot): Params {
+  const queryParams: Params = {};
+
+  if (state.url && state.url !== '/') {
+    queryParams['redirect'] = state.url;
+  }
+
+  if (authService.consumirTokenDescartado()) {
+    queryParams['expirada'] = '1';
+  }
+
+  return queryParams;
+}

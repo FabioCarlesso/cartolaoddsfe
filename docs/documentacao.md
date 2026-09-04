@@ -87,7 +87,12 @@ export const appConfig: ApplicationConfig = {
 | `provideHttpClient` | HTTP com os interceptors funcionais, na ordem de execução |
 | `provideAnimations` | Suporte a animações Angular |
 
-A ordem do array de `withInterceptors` é a ordem de execução: o `authInterceptor` vem antes do `errorInterceptor` para tratar o `401` de sessão expirada antes da tradução genérica de mensagem.
+A ordem do array de `withInterceptors` é a ordem de execução **da requisição**: o `authInterceptor`
+vem primeiro e, por isso, fica mais externo. Na volta o erro sobe na ordem inversa, então quem vê o
+erro primeiro é o `errorInterceptor` — que traduz a mensagem e devolve a **mesma instância** de
+`HttpErrorResponse`. Isso não é detalhe de estilo: o `authInterceptor` reconhece o `401` de sessão
+pelo `instanceof`, e uma cópia (`{ ...error }`) o desligaria em silêncio, deixando o usuário ver
+"Sessão expirada" sem nunca ser deslogado.
 
 ---
 
@@ -159,6 +164,8 @@ apenas no boot — porque o token vence com a aba aberta.
 | `alterarSenha(request)` | `PATCH /api/usuarios/me/senha` |
 | `logout()` | Limpa a sessão e navega para `/login` |
 | `encerrarSessaoExpirada()` | Limpa a sessão e navega para `/login?expirada=1` |
+| `encerrarSessaoAposTrocaDeSenha()` | Limpa a sessão e navega para `/login?senhaAlterada=1` |
+| `consumirTokenDescartado()` | Diz, uma única vez, se a última limpeza veio de um token que não valia mais |
 | `isAuthenticated()` | Revalida o token (existência, claims e expiração) |
 | `getUsuarioAtual()` / `getPerfilAtual()` / `isAdmin()` | Leitura da sessão corrente |
 
@@ -186,10 +193,17 @@ Barra as rotas internas e guarda a URL pretendida em `?redirect=`, para devolver
 ela após o login. A tela de login só aceita destinos internos: um `redirect` absoluto ou
 iniciado por `//` é ignorado, para que a rota não vire trampolim para outro domínio.
 
+Quando o token existe mas não vale mais, o guard acrescenta `expirada=1` — e esse é o caminho
+mais comum, porque quem volta com a sessão vencida é barrado aqui, antes de qualquer chamada
+tomar `401`. Sem isso o usuário caía numa tela de login sem nenhuma explicação. O aviso é
+consumido uma única vez (`consumirTokenDescartado()`), para não reaparecer numa visita
+posterior ao login.
+
 ### `core/guards/role.guard.ts`
 
 `roleGuard(perfis)` restringe a rota aos perfis informados: sem sessão manda para `/login`
-(guardando o `redirect`), e com sessão de perfil errado manda para `/403`.
+(com os mesmos parâmetros montados pelo `authGuard`), e com sessão de perfil errado manda
+para `/403`.
 
 Isto é defesa de **experiência**, não de segurança: quem editar o `localStorage` chega à
 tela, mas a API recusa a operação. A autorização real é sempre a do `SecurityConfig` no
@@ -199,15 +213,20 @@ backend.
 
 | Página | Rota | Papel |
 |---|---|---|
-| `login-page` | `/login` | Formulário reativo (e-mail e senha), estado de carregamento, erro de credencial e aviso de sessão expirada |
+| `login-page` | `/login` | Formulário reativo (e-mail e senha), estado de carregamento, erro de credencial, aviso de sessão expirada e confirmação de troca de senha |
 | `forbidden-page` | `/403` | Aviso de acesso restrito, com volta para `/time` |
-| `alterar-senha-page` | `/alterar-senha` | Troca da própria senha; como o backend invalida o token na operação, o fluxo termina em logout |
+| `alterar-senha-page` | `/alterar-senha` | Troca da própria senha; como o backend invalida o token na operação, o fluxo termina em logout — a confirmação aparece na tela de login, porque a navegação acontece no mesmo instante |
 
 ### Shell
 
 O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
 (atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config" e "Usuários" só aparecem
 para o perfil `ADMIN`.
+
+Como ADMIN o cabeçalho carrega sete links mais o nome e o **Sair**, e por isso degrada em
+etapas: até 1120px aperta o espaçamento, até 1000px deixa os links só com o ícone, até 640px
+esconde também o nome do usuário e, até 480px, o texto da marca. Sem essas etapas a página
+inteira ganhava scroll horizontal e o **Sair** saía da tela.
 
 ---
 

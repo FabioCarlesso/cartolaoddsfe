@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -18,6 +19,12 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
 
         @if (sessaoExpirada) {
           <app-alert-banner message="Sessão expirada. Entre novamente." type="warning" />
+        }
+        @if (senhaAlterada) {
+          <app-alert-banner
+            message="Senha alterada. Entre com a nova senha."
+            type="success"
+          />
         }
         @if (erro) {
           <app-alert-banner [message]="erro" type="error" />
@@ -144,6 +151,7 @@ export class LoginPageComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -153,19 +161,26 @@ export class LoginPageComponent implements OnInit {
   carregando = false;
   erro = '';
   sessaoExpirada = false;
+  senhaAlterada = false;
 
   private redirect = '/time';
 
+  // Diferente das outras telas, esta pode receber parâmetros novos sem ser recriada: quem
+  // já está no login e esbarra num guard continua na mesma rota, e só a query muda. Ler do
+  // `snapshot` deixaria o destino e o aviso congelados na primeira visita.
   ngOnInit(): void {
-    const params = this.route.snapshot.queryParamMap;
-    this.sessaoExpirada = params.get('expirada') === '1';
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.sessaoExpirada = params.get('expirada') === '1';
+      this.senhaAlterada = params.get('senhaAlterada') === '1';
 
-    // Só rotas internas são aceitas como destino: um `redirect` absoluto vindo da URL
-    // transformaria a tela de login em trampolim para outro domínio.
-    const redirect = params.get('redirect');
-    if (redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/login')) {
-      this.redirect = redirect;
-    }
+      // Só rotas internas são aceitas como destino: um `redirect` absoluto vindo da URL
+      // transformaria a tela de login em trampolim para outro domínio.
+      const redirect = params.get('redirect');
+      this.redirect =
+        redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/login')
+          ? redirect
+          : '/time';
+    });
   }
 
   invalido(campo: 'email' | 'senha'): boolean {
@@ -182,6 +197,7 @@ export class LoginPageComponent implements OnInit {
     this.carregando = true;
     this.erro = '';
     this.sessaoExpirada = false;
+    this.senhaAlterada = false;
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: () => {

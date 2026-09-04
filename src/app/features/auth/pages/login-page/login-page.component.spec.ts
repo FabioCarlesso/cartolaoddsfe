@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { Subject, of, throwError } from 'rxjs';
+import { ActivatedRoute, ParamMap, Router, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { LoginPageComponent } from './login-page.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoginResponse } from '../../../../core/models/auth.model';
@@ -19,8 +19,11 @@ describe('LoginPageComponent', () => {
   let authService: jasmine.SpyObj<AuthService>;
   let router: jasmine.SpyObj<Router>;
 
+  let queryParamMap$: BehaviorSubject<ParamMap>;
+
   async function montar(queryParams: Record<string, string> = {}): Promise<void> {
     TestBed.resetTestingModule();
+    queryParamMap$ = new BehaviorSubject<ParamMap>(convertToParamMap(queryParams));
     authService = jasmine.createSpyObj('AuthService', ['login']);
     router = jasmine.createSpyObj('Router', ['navigateByUrl']);
 
@@ -31,7 +34,10 @@ describe('LoginPageComponent', () => {
         { provide: Router, useValue: router },
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } }
+          useValue: {
+            queryParamMap: queryParamMap$.asObservable(),
+            snapshot: { queryParamMap: convertToParamMap(queryParams) }
+          }
         }
       ]
     }).compileComponents();
@@ -134,5 +140,34 @@ describe('LoginPageComponent', () => {
     component.entrar();
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/time');
+  });
+
+  it('should confirm the password change coming from /alterar-senha', async () => {
+    await montar({ senhaAlterada: '1' });
+
+    expect(component.senhaAlterada).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.alert-success').textContent).toContain(
+      'Senha alterada'
+    );
+  });
+
+  // A tela de login não é recriada quando só a query muda — é o que acontece com quem já
+  // está nela e esbarra num guard. Ler do snapshot deixava o aviso e o destino congelados.
+  it('should react to query params arriving while it stays mounted', () => {
+    expect(component.sessaoExpirada).toBeFalse();
+
+    queryParamMap$.next(convertToParamMap({ expirada: '1', redirect: '/favoritos' }));
+    fixture.detectChanges();
+
+    expect(component.sessaoExpirada).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.alert-warning').textContent).toContain(
+      'Sessão expirada'
+    );
+
+    authService.login.and.returnValue(of(loginResponse));
+    component.form.setValue({ email: 'fabio@cartolaodds.local', senha: 'senha-forte-123' });
+    component.entrar();
+
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/favoritos');
   });
 });

@@ -9,7 +9,7 @@ describe('AlterarSenhaPageComponent', () => {
   let authService: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
-    authService = jasmine.createSpyObj('AuthService', ['alterarSenha', 'logout']);
+    authService = jasmine.createSpyObj('AuthService', ['alterarSenha', 'encerrarSessaoAposTrocaDeSenha']);
 
     await TestBed.configureTestingModule({
       imports: [AlterarSenhaPageComponent],
@@ -61,7 +61,8 @@ describe('AlterarSenhaPageComponent', () => {
       novaSenha: 'nova-senha-456'
     });
     expect(component.sucesso).toBeTrue();
-    expect(authService.logout).toHaveBeenCalled();
+    // A confirmação aparece na tela de login: aqui a navegação acontece no mesmo instante.
+    expect(authService.encerrarSessaoAposTrocaDeSenha).toHaveBeenCalled();
   });
 
   it('should show the API message when the current password is wrong', () => {
@@ -78,7 +79,7 @@ describe('AlterarSenhaPageComponent', () => {
     fixture.detectChanges();
 
     expect(component.erro).toBe('Senha atual incorreta.');
-    expect(authService.logout).not.toHaveBeenCalled();
+    expect(authService.encerrarSessaoAposTrocaDeSenha).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('.alert-error').textContent).toContain('incorreta');
   });
 });

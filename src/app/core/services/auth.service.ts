@@ -31,6 +31,14 @@ export class AuthService {
 
   private readonly sessao = signal<SessaoUsuario | null>(null);
 
+  /**
+   * Marca que a última limpeza veio de um token que não valia mais — vencido, ilegível ou
+   * sem perfil —, e não de uma saída deliberada. É o que permite à tela de login explicar
+   * por que o usuário foi parar nela, mesmo quando quem descartou o token foi o guard, sem
+   * nenhuma chamada à API acontecer.
+   */
+  private tokenDescartado = false;
+
   /** Sessão corrente, para os templates reagirem a login e logout. */
   readonly usuarioAtual = this.sessao.asReadonly();
   readonly autenticado = computed(() => this.sessao() !== null);
@@ -62,6 +70,16 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Saída após a troca de senha. O backend invalida o token nessa operação, então a sessão
+   * já morreu de qualquer forma; o parâmetro é o que faz a tela de login confirmar a troca
+   * em vez de deixar o usuário sem saber se ela deu certo.
+   */
+  encerrarSessaoAposTrocaDeSenha(): void {
+    this.limparSessao();
+    this.router.navigate(['/login'], { queryParams: { senhaAlterada: '1' } });
+  }
+
   /** Saída forçada por token expirado ou revogado — a tela de login avisa o motivo. */
   encerrarSessaoExpirada(): void {
     this.limparSessao();
@@ -72,6 +90,17 @@ export class AuthService {
     remover(TOKEN_KEY);
     remover(NOME_KEY);
     this.sessao.set(null);
+    this.tokenDescartado = false;
+  }
+
+  /**
+   * Consome o aviso de token descartado: devolve `true` uma única vez por descarte, para o
+   * banner de sessão expirada não reaparecer numa visita posterior à tela de login.
+   */
+  consumirTokenDescartado(): boolean {
+    const descartado = this.tokenDescartado;
+    this.tokenDescartado = false;
+    return descartado;
   }
 
   getToken(): string | null {
@@ -93,6 +122,7 @@ export class AuthService {
     const sessao = montarSessao(token, ler(NOME_KEY));
     if (!sessao) {
       this.limparSessao();
+      this.tokenDescartado = true;
       return false;
     }
 
@@ -119,6 +149,7 @@ export class AuthService {
     if (token && !sessao) {
       // Token corrompido, sem o claim de perfil ou já vencido: não há como confiar nele.
       this.limparSessao();
+      this.tokenDescartado = true;
       return;
     }
 

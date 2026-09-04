@@ -50,12 +50,12 @@ describe('roleGuard', () => {
     expect((result as UrlTree).toString()).toBe('/login?redirect=%2Fusuarios');
   });
 
-  it('should send an expired session to /login instead of /403', () => {
+  it('should send an expired session to /login instead of /403, flagging it', () => {
     localStorage.setItem(TOKEN_KEY, tokenExpirado('ADMIN'));
 
     const result = rodar(['ADMIN']);
 
-    expect((result as UrlTree).toString()).toBe('/login?redirect=%2Fusuarios');
+    expect((result as UrlTree).toString()).toBe('/login?redirect=%2Fusuarios&expirada=1');
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
 });

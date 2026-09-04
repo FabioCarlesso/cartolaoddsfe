@@ -47,4 +47,25 @@ describe('authGuard', () => {
     expect(result instanceof UrlTree).toBeTrue();
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
   });
+
+  // Quem volta com a sessão vencida é desconectado aqui, antes de qualquer chamada tomar
+  // 401 — sem o parâmetro, a tela de login não teria como explicar o que aconteceu.
+  it('should flag the expired session when a token was discarded', () => {
+    localStorage.setItem(TOKEN_KEY, tokenExpirado());
+
+    const result = rodar('/favoritos') as UrlTree;
+
+    expect(result.toString()).toBe('/login?redirect=%2Ffavoritos&expirada=1');
+  });
+
+  it('should not flag an expired session for a visitor who never had one', () => {
+    expect((rodar('/favoritos') as UrlTree).toString()).toBe('/login?redirect=%2Ffavoritos');
+  });
+
+  it('should flag the expired session only once', () => {
+    localStorage.setItem(TOKEN_KEY, tokenExpirado());
+    rodar();
+
+    expect((rodar('/favoritos') as UrlTree).toString()).toBe('/login?redirect=%2Ffavoritos');
+  });
 });

@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { Perfil } from '../models/auth.model';
 import { AuthService } from '../services/auth.service';
+import { paramsDeLogin } from './auth.guard';
 
 /**
  * Restringe uma rota aos perfis informados.
@@ -17,9 +18,7 @@ export function roleGuard(perfisPermitidos: Perfil[]): CanActivateFn {
     const router = inject(Router);
 
     if (!authService.isAuthenticated()) {
-      return router.createUrlTree(['/login'], {
-        queryParams: state.url && state.url !== '/' ? { redirect: state.url } : {}
-      });
+      return router.createUrlTree(['/login'], { queryParams: paramsDeLogin(authService, state) });
     }
 
     const perfil = authService.getPerfilAtual();

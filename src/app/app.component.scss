@@ -120,6 +120,42 @@
   color: var(--text-muted);
 }
 
+/*
+ * Como ADMIN o cabeçalho carrega sete links mais o nome e o "Sair": com o espaçamento e os
+ * rótulos cheios ele precisa de ~1120px, e abaixo disso não era a barra que quebrava — a
+ * página inteira ganhava scroll horizontal, com o "Sair" fora da tela. A degradação vai em
+ * dois passos: primeiro aperta o espaçamento, depois deixa os links só com o ícone, que é o
+ * mesmo recurso que o mobile já usava.
+ */
+@media (max-width: 1120px) {
+  .navbar .navbar-inner {
+    padding: 0 1rem;
+  }
+
+  .navbar .nav-links {
+    gap: 0.125rem;
+  }
+
+  .navbar .nav-links a {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .nav-user {
+    gap: 0.25rem;
+  }
+
+  .nav-user .user-name {
+    max-width: 130px;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 1000px) {
+  .navbar .nav-links a span:last-child {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .navbar .navbar-inner {
     padding: 0 1rem;
@@ -134,6 +170,25 @@
   }
 
   .nav-user .user-name {
+    display: none;
+  }
+
+  .navbar .nav-links {
+    gap: 0;
+  }
+
+  .navbar .nav-links a {
+    padding: 0.5rem 0.45rem;
+  }
+
+  .nav-user .btn-sair {
+    padding: 0.4rem 0.6rem;
+  }
+}
+
+/* No celular o "Sair" precisa caber junto dos sete ícones: sobra a bola da marca. */
+@media (max-width: 480px) {
+  .navbar .brand .brand-text {
     display: none;
   }
 }

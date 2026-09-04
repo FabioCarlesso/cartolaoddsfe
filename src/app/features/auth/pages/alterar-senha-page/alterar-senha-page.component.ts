@@ -30,12 +30,6 @@ function senhasConferem(group: AbstractControl): ValidationErrors | null {
         @if (erro) {
           <app-alert-banner [message]="erro" type="error" />
         }
-        @if (sucesso) {
-          <app-alert-banner
-            message="Senha alterada. Entre novamente com a nova senha."
-            type="success"
-          />
-        }
 
         <form [formGroup]="form" (ngSubmit)="salvar()" novalidate>
           <div class="form-group">
@@ -150,9 +144,11 @@ export class AlterarSenhaPageComponent {
       next: () => {
         this.salvando = false;
         this.sucesso = true;
-        // O backend invalida o token nesta operação, então a sessão atual já morreu:
-        // é o próprio logout que evita o usuário esbarrar num 401 na próxima navegação.
-        this.authService.logout();
+        // O backend invalida o token nesta operação, então a sessão atual já morreu: sair
+        // aqui evita o usuário esbarrar num 401 na próxima navegação. A confirmação vai
+        // junto, na tela de login — mostrá-la aqui seria inútil, porque a navegação
+        // acontece no mesmo instante.
+        this.authService.encerrarSessaoAposTrocaDeSenha();
       },
       error: (err) => {
         this.erro = err.userMessage ?? 'Não foi possível trocar a senha.';
