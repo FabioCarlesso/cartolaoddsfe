@@ -1,8 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { authInterceptor } from './auth.interceptor';
+import { errorInterceptor } from './error.interceptor';
 import { AuthService } from '../services/auth.service';
 import { tokenValido } from '../services/auth.service.spec';
 
@@ -129,5 +135,86 @@ describe('authInterceptor', () => {
     });
 
     httpMock.expectOne('/api/time').flush({}, { status: 500, statusText: 'Internal Server Error' });
+  });
+});
+
+// Os testes acima exercitam o authInterceptor sozinho. Como o app registra os dois
+// interceptors juntos, e é o errorInterceptor que fica mais perto do backend (logo, o
+// primeiro a ver o erro na volta), a cadeia completa precisa de cobertura própria: foi
+// exatamente aí que o 401 deixou de deslogar quando o erro chegava como cópia, sem o
+// protótipo de HttpErrorResponse.
+describe('authInterceptor chained with the errorInterceptor', () => {
+  let http: HttpClient;
+  let httpMock: HttpTestingController;
+  let authService: AuthService;
+  let router: jasmine.SpyObj<Router>;
+
+  beforeEach(() => {
+    localStorage.clear();
+    router = jasmine.createSpyObj('Router', ['navigate']);
+    TestBed.configureTestingModule({
+      providers: [
+        // Mesma ordem de app.config.ts.
+        provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+        provideHttpClientTesting(),
+        { provide: Router, useValue: router }
+      ]
+    });
+    http = TestBed.inject(HttpClient);
+    httpMock = TestBed.inject(HttpTestingController);
+    authService = TestBed.inject(AuthService);
+    localStorage.setItem(TOKEN_KEY, tokenValido());
+    authService.isAuthenticated();
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    localStorage.clear();
+  });
+
+  it('should clear the session and go to /login on 401, with the translated message', (done) => {
+    http.get('/api/time').subscribe({
+      error: (err) => {
+        expect(authService.autenticado()).toBeFalse();
+        expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+        expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { expirada: '1' } });
+        expect(err.userMessage).toBe('Sessão expirada. Entre novamente.');
+        done();
+      }
+    });
+
+    httpMock.expectOne('/api/time').flush(
+      { mensagem: 'Autenticacao necessaria para acessar este recurso.' },
+      { status: 401, statusText: 'Unauthorized' }
+    );
+  });
+
+  it('should keep the session on 403, with the translated message', (done) => {
+    http.patch('/api/config', {}).subscribe({
+      error: (err) => {
+        expect(authService.autenticado()).toBeTrue();
+        expect(localStorage.getItem(TOKEN_KEY)).not.toBeNull();
+        expect(router.navigate).not.toHaveBeenCalled();
+        expect(err.userMessage).toBe('Você não tem permissão para esta ação.');
+        done();
+      }
+    });
+
+    httpMock.expectOne('/api/config').flush(
+      { mensagem: 'Voce nao tem permissao para acessar este recurso.' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+  });
+
+  it('should keep the error usable as an HttpErrorResponse for the interceptors above', (done) => {
+    http.get('/api/time').subscribe({
+      error: (err) => {
+        expect(err instanceof HttpErrorResponse).toBeTrue();
+        expect(err.status).toBe(401);
+        done();
+      }
+    });
+
+    httpMock.expectOne('/api/time').flush({}, { status: 401, statusText: 'Unauthorized' });
   });
 });

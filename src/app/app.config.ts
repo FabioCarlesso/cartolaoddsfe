@@ -9,8 +9,10 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes, withComponentInputBinding()),
-    // A ordem do array é a ordem de execução: o authInterceptor precisa vir primeiro
-    // para tratar o 401 de sessão antes da tradução genérica do errorInterceptor.
+    // A ordem do array é a ordem de execução da requisição. Na volta o erro sobe na
+    // ordem inversa, então o errorInterceptor traduz a mensagem antes de o
+    // authInterceptor ver o 401 — por isso ele devolve a mesma instância de
+    // HttpErrorResponse, e não uma cópia.
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimations()
   ]

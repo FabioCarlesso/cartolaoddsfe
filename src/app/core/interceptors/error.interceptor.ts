@@ -39,7 +39,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         userMessage = error.error?.mensagem || 'Erro interno do servidor.';
       }
 
-      return throwError(() => ({ ...error, userMessage }));
+      // A mensagem é anexada à própria instância de HttpErrorResponse, e não a uma cópia:
+      // o authInterceptor está acima na cadeia e reconhece o 401 de sessão pelo
+      // `instanceof`. Um objeto novo (`{ ...error }`) perderia o protótipo e o desligaria
+      // em silêncio — o usuário veria "Sessão expirada" sem nunca ser deslogado.
+      return throwError(() => Object.assign(error, { userMessage }));
     })
   );
 };

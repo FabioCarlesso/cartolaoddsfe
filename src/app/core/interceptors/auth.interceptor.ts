@@ -9,9 +9,10 @@ const LOGIN_URL = '/api/auth/login';
 /**
  * Carimba o `Authorization` em toda chamada à API e reage ao fim da sessão.
  *
- * Registrado antes do `errorInterceptor` em `app.config.ts`: a resposta de erro sobe pela
- * cadeia na ordem inversa, então tratar `401` aqui acontece antes da tradução genérica
- * de mensagem.
+ * Registrado antes do `errorInterceptor` em `app.config.ts`, o que o deixa mais externo:
+ * no caminho de erro o `errorInterceptor` roda primeiro e traduz a mensagem, e só depois
+ * o `401` chega aqui. Os dois convivem porque o `errorInterceptor` propaga a mesma
+ * instância de `HttpErrorResponse` — é ela que o `instanceof` abaixo reconhece.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
