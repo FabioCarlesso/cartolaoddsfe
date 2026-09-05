@@ -46,9 +46,11 @@ node scripts/prints/capturar.mjs http://localhost:4310 9333 /tmp/prints
 scripts/prints/converter.sh /tmp/prints
 ```
 
-O `servidor-demo.mjs` injeta no `index.html` um token de fachada no `localStorage`, para as
-capturas caírem direto nas telas internas sem passar pelo login, e semeia a seleção de formações
-no `sessionStorage` para a tela de comparação já abrir com quatro formações escolhidas.
+O `servidor-demo.mjs` espelha o nginx de produção: a raiz recebe o `index.html` pré-renderizado e
+as demais rotas caem no `index.csr.html`. No HTML servido ele injeta um token de fachada no
+`localStorage`, para as capturas caírem direto nas telas internas sem passar pelo login, e semeia
+a seleção de formações no `sessionStorage` para a tela de comparação já abrir com quatro
+formações escolhidas.
 
 ## Como conferir a landing depois
 

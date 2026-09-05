@@ -95,9 +95,21 @@ const servidor = createServer(async (req, res) => {
     res.writeHead(200, cabecalhos);
     return res.end(conteudo);
   } catch {
-    const index = await readFile(join(RAIZ, 'index.html'), 'utf8');
+    // Espelha o nginx de produção: a raiz recebe a landing pré-renderizada e as demais rotas
+    // caem no shell vazio (`index.csr.html`), para nenhuma tela interna piscar a landing antes
+    // de a aplicação assumir.
+    const arquivoHtml = url.pathname === '/' ? 'index.html' : 'index.csr.html';
+    const html = await readFile(join(RAIZ, arquivoHtml), 'utf8');
+    const corpo = SEM_BACKEND ? html : html.replace('</head>', `${semente}</head>`);
+    // O nginx comprime `text/html` sempre que o gzip está ligado, independentemente de
+    // `gzip_types`; sem isto aqui, a landing pré-renderizada trafegaria crua e a medição de
+    // performance sairia pior do que a produção.
+    if ((req.headers['accept-encoding'] ?? '').includes('gzip')) {
+      res.writeHead(200, { 'content-type': TIPOS['.html'], 'cache-control': 'no-cache', 'content-encoding': 'gzip' });
+      return res.end(gzipSync(corpo));
+    }
     res.writeHead(200, { 'content-type': TIPOS['.html'], 'cache-control': 'no-cache' });
-    return res.end(SEM_BACKEND ? index : index.replace('</head>', `${semente}</head>`));
+    return res.end(corpo);
   }
 });
 

@@ -23,13 +23,17 @@ export class AppComponent {
    * pública — e o shell sai da frente para as faixas sangrarem de ponta a ponta. O dado vem da
    * rota mais profunda a cada navegação, e não de um `if` pela URL, para novas rotas fluidas
    * só precisarem do `data` no `app.routes.ts`.
+   *
+   * Fica `undefined` até a primeira navegação terminar, e nesse intervalo o shell não desenha
+   * nada: assumir `false` fazia a navbar aparecer por alguns quadros sobre a landing — que já
+   * chega pronta do prerender — e empurrar a página 64px para baixo, um salto de layout que
+   * sozinho respondia por dois terços do CLS medido.
    */
   readonly layoutFluido = toSignal(
     this.router.events.pipe(
       filter((evento) => evento instanceof NavigationEnd),
       map(() => this.rotaAtiva().snapshot.data['layoutFluido'] === true)
-    ),
-    { initialValue: false }
+    )
   );
 
   sair(): void {

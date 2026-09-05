@@ -55,7 +55,8 @@ Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/aut
 | HTTP | `HttpClient` com interceptor funcional |
 | Forms | `ReactiveFormsModule` não usado — apenas `FormsModule` para dois filtros simples |
 | State | Local component state (signals/NgRx não são necessários ainda) |
-| Routing | Lazy loading por `loadComponent` |
+| Routing | Lazy loading por `loadComponent`; cada rota declara o próprio `title` |
+| SSG | `@angular/ssr` + `platform-server` pré-renderizam só a rota `/` no build (sem servidor Node) |
 | Build | esbuild via `@angular-devkit/build-angular:application` |
 
 ---
@@ -173,7 +174,7 @@ error: (err) => {
 }
 ```
 
-### Landing pública e layout do shell
+### Landing pública, prerender e layout do shell
 
 A rota `''` carrega a landing com o `visitanteGuard` (com sessão válida, redireciona para
 `/time`) e `data: { layoutFluido: true }`. O `AppComponent` lê esse dado da rota mais profunda a
@@ -182,6 +183,12 @@ faixas sangram de ponta a ponta. Uma rota nova com layout fluido só precisa dec
 
 Nenhum componente da landing pode injetar serviço que chame `/api`: a página precisa renderizar
 inteira com o backend desligado, e há teste que reprova qualquer requisição aberta na montagem.
+Essa restrição é também o que permite pré-renderizá-la no build (`prerender-routes.txt` lista só
+`/`): o HTML da landing sai pronto, e o `index.csr.html` continua sendo o shell das demais rotas.
+
+O `layoutFluido` fica `undefined` até a primeira navegação terminar e, nesse intervalo, o shell
+não desenha cabeçalho nem rodapé — assumir "rota normal" fazia a navbar piscar sobre a landing
+pré-renderizada e empurrar a página 64px para baixo.
 As capturas em `src/assets/landing/` são das telas reais e têm regra de manutenção própria em
 `docs/prints-da-landing.md`.
 
@@ -353,8 +360,6 @@ Se o backend estiver em `localhost:8080` no host, **nenhuma configuração adici
 
 ## Próximas Melhorias Previstas
 
-- [ ] Pré-renderizar a landing (SSG) — sem isso o Lighthouse mobile fica na casa dos 85 pontos de
-      performance, limitado pelo bootstrap do Angular, e não por peso de imagem ou de CSS
 - [ ] Dark/light mode toggle
 - [ ] Página de dashboard com resumo de todas as features
 - [ ] Gráficos de score por posição (Chart.js ou D3)

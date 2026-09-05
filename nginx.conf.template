@@ -16,9 +16,22 @@ server {
     # os seus próprios add_header e por isso não herda estes.
     include /etc/nginx/snippets/security-headers.conf;
 
-    # Angular SPA — redireciona qualquer rota para index.html
+    # A raiz é a landing pré-renderizada no build: o HTML já vem com o conteúdo,
+    # e não com o <app-root> vazio.
+    location = / {
+        try_files /index.html =404;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+
+        # Headers de segurança (não são herdados do nível server pois este
+        # location já define add_header Cache-Control)
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # Demais rotas do Angular caem no shell vazio (`index.csr.html`), e não na
+    # landing pré-renderizada: servir o index.html aqui faria quem abre /time
+    # direto ver a landing piscar antes de a aplicação assumir a tela.
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri $uri/ /index.csr.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
 
         # Headers de segurança (não são herdados do nível server pois este

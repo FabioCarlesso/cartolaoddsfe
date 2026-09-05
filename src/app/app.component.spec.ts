@@ -20,7 +20,15 @@ describe('AppComponent', () => {
   let usuarioAtual: ReturnType<typeof signal<SessaoUsuario | null>>;
   let authService: jasmine.SpyObj<AuthService>;
 
-  async function montar(usuario: SessaoUsuario | null, rotas: Routes = []) {
+  /**
+   * O shell só decide o layout depois da primeira navegação (ver `layoutFluido`), então toda
+   * montagem navega para uma rota antes de olhar para o cabeçalho e o rodapé.
+   */
+  async function montar(
+    usuario: SessaoUsuario | null,
+    rotas: Routes = [{ path: '**', component: RotaFakeComponent }],
+    destino = '/'
+  ) {
     TestBed.resetTestingModule();
     usuarioAtual = signal<SessaoUsuario | null>(usuario);
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['logout'], {
@@ -35,6 +43,8 @@ describe('AppComponent', () => {
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    await TestBed.inject(Router).navigateByUrl(destino);
     fixture.detectChanges();
     return fixture;
   }
@@ -103,12 +113,11 @@ describe('AppComponent', () => {
   // A landing pública traz o próprio cabeçalho e o próprio rodapé; sem sair da frente, o shell
   // duplicaria os dois e ainda limitaria a largura das faixas.
   it('should hide its own header and footer on a fluid-layout route', async () => {
-    const fixture = await montar(null, [
-      { path: 'landing', data: { layoutFluido: true }, component: RotaFakeComponent }
-    ]);
-
-    await TestBed.inject(Router).navigate(['/landing']);
-    fixture.detectChanges();
+    const fixture = await montar(
+      null,
+      [{ path: 'landing', data: { layoutFluido: true }, component: RotaFakeComponent }],
+      '/landing'
+    );
 
     expect(fixture.nativeElement.querySelector('.navbar')).toBeNull();
     expect(fixture.nativeElement.querySelector('.footer')).toBeNull();
@@ -116,13 +125,41 @@ describe('AppComponent', () => {
   });
 
   it('should keep header and footer on a regular route', async () => {
-    const fixture = await montar(sessao, [{ path: 'time', component: RotaFakeComponent }]);
-
-    await TestBed.inject(Router).navigate(['/time']);
-    fixture.detectChanges();
+    const fixture = await montar(sessao, [{ path: 'time', component: RotaFakeComponent }], '/time');
 
     expect(fixture.nativeElement.querySelector('.navbar')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.footer')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.main-content-fluido')).toBeNull();
+  });
+
+  /**
+   * A landing chega pronta do prerender. Se o shell assumisse "rota normal" enquanto a primeira
+   * navegação não termina, a navbar apareceria por alguns quadros e empurraria a página inteira
+   * 64px para baixo — o salto de layout que dominava o CLS da página pública.
+   */
+  it('should render no header or footer before the first navigation settles', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [
+        provideRouter([{ path: '**', component: RotaFakeComponent }]),
+        {
+          provide: AuthService,
+          useValue: jasmine.createSpyObj<AuthService>('AuthService', ['logout'], {
+            usuarioAtual: signal(null).asReadonly(),
+            autenticado: signal(false).asReadonly(),
+            perfilAtual: signal(null).asReadonly()
+          } as Partial<AuthService>)
+        }
+      ]
+    });
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.layoutFluido()).toBeUndefined();
+    expect(fixture.nativeElement.querySelector('.navbar')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.footer')).toBeNull();
     expect(fixture.nativeElement.querySelector('.main-content-fluido')).toBeNull();
   });
 });

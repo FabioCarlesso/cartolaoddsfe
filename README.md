@@ -30,6 +30,7 @@ O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend 
 | Angular Router | 21.2 | Roteamento com lazy loading |
 | Angular HttpClient | 21.2 | Comunicação HTTP com o backend |
 | SCSS | — | Estilização com CSS custom properties |
+| @angular/ssr + platform-server | 21.2 | Prerender (SSG) da landing no build — sem servidor Node em produção |
 
 ---
 
@@ -65,6 +66,12 @@ open http://localhost:4200
 npm run build
 # Artefatos em dist/cartolaoddsfe/browser/
 ```
+
+O build pré-renderiza a rota `/`: a landing sai pronta no `index.html`, sem esperar o bootstrap
+do Angular. As demais rotas usam o `index.csr.html`, o mesmo shell vazio de sempre — servir a
+landing pré-renderizada como fallback faria quem abre `/time` direto vê-la piscar antes da tela
+carregar. O nginx do `Dockerfile` já faz essa separação; ao servir o `dist` em outro servidor,
+aponte `/` para `index.html` e o fallback de SPA para `index.csr.html`.
 
 ---
 
@@ -171,11 +178,14 @@ As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretend
 ```
 src/
 ├── main.ts                          # Bootstrap standalone
+├── main.server.ts                   # Entry do prerender da landing (SSG no build)
 ├── index.html
+├── robots.txt
 ├── styles.scss                      # Design system: variáveis CSS globais
 └── app/
-    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error)
-    ├── app.routes.ts                # Rotas com lazy loading e authGuard
+    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error), hidratação
+    ├── app.config.server.ts         # Providers extras usados só no prerender
+    ├── app.routes.ts                # Rotas com lazy loading, guardas e título por rota
     ├── app.component.*              # Shell: navbar + usuário logado + router-outlet
     ├── core/
     │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
@@ -292,6 +302,7 @@ npm test -- --code-coverage
 
 | Arquivo de teste | Camada | Cenários |
 |---|---|---|
+| `app.routes.spec.ts` | Rotas | Título declarado em toda rota navegável, título público na raiz, `**` para a landing |
 | `app.component.spec.ts` | Shell | Navbar, links por perfil, usuário logado, sair, navegação escondida sem sessão, layout fluido da landing |
 | `visitante.guard.spec.ts` | Core | Visitante liberado na landing, sessão válida redirecionada a `/time`, token expirado tratado como visitante |
 | `landing-page.component.spec.ts` | Page | Faixas na ordem, um único `h1`, seções nomeadas, zero requisição HTTP, sem promessa de auto-cadastro |
