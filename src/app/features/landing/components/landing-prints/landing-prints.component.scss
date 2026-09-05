@@ -1,0 +1,65 @@
+@use '../../secao';
+
+.prints {
+  @include secao.faixa;
+  background: var(--bg-primary);
+}
+
+.prints__inner {
+  @include secao.faixa-interna;
+}
+
+.prints__sobrancelha {
+  @include secao.sobrancelha;
+}
+
+.prints__titulo {
+  @include secao.titulo-secao;
+}
+
+.prints__intro {
+  margin-top: 0.75rem;
+  max-width: 60ch;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.prints__galeria {
+  margin-top: 2.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.print {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.print--destaque {
+  grid-column: 1 / -1;
+}
+
+// `height: auto` anula a altura do atributo mantendo a proporção; o par width/height do HTML
+// continua servindo para o navegador reservar o espaço antes de a imagem chegar.
+.print__imagem {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.print__legenda {
+  padding: 0.875rem 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .prints__galeria {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,60 @@
+// Faixa da landing: o fundo sangra de ponta a ponta e o conteúdo se alinha ao mesmo eixo de
+// 1200px do `.page-container` e do `.navbar-inner` — daí a repetição do `max-width` e do
+// padding, que é o que faz o texto começar na mesma coluna do resto do sistema.
+//
+// Partial em vez de regra global: só a landing usa, e o SCSS de componente é carregado com
+// ela em vez de pesar no `styles.scss` de todas as telas. Cada componente que consome os
+// mixins paga essas poucas linhas no próprio budget de `anyComponentStyle` (6kB de warning).
+
+@mixin faixa {
+  display: block;
+  padding: 5rem 0;
+
+  @media (max-width: 768px) {
+    padding: 3.5rem 0;
+  }
+}
+
+@mixin faixa-interna {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+
+  @media (max-width: 480px) {
+    padding: 0 1rem;
+  }
+}
+
+// Rótulo em caixa alta acima do título de cada faixa.
+@mixin sobrancelha {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-primary);
+  margin-bottom: 0.75rem;
+}
+
+@mixin titulo-secao {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+
+  @media (max-width: 640px) {
+    font-size: 1.6rem;
+  }
+}
+
+// O tema é escuro e o anel de foco padrão do Chrome é preto: sem isto a navegação por
+// teclado some no fundo (`--bg-primary` é #0a0f1a).
+@mixin foco-visivel {
+  &:focus-visible {
+    outline: 2px solid var(--green-primary);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
+}

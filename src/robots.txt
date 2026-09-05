@@ -1,0 +1,6 @@
+# A landing (/) é a única página pública com conteúdo próprio no HTML — ela é
+# pré-renderizada no build. O resto da aplicação exige sessão e é desenhado no
+# cliente, então não há o que indexar nessas rotas.
+User-agent: *
+Allow: /
+Disallow: /api/

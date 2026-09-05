@@ -8,6 +8,7 @@
 
 Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso) e apresenta:
 
+- **Landing pública na raiz** (`/`) explicando o produto e a engenharia por trás dele, com as telas reais do sistema — renderiza inteira sem o backend no ar
 - **Time ideal da rodada** em formação 4-3-3 visual, com orçamento máximo opcional (cartoletas) — o time é sempre o de maior score, e quando há orçamento, o maior score possível dentro do teto — custo total e barra de saldo
 - **Ranking de atletas** por score ponderado com filtros por posição, opção de excluir jogadores em dúvida e indicador de consistência (desvio padrão)
 - **Análise de favoritos** com odds, probabilidades implícitas e jogos descartados
@@ -15,7 +16,7 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 - **Painel de configurações** para ajustar parâmetros de negócio (odd limite, pesos do score, formação) e gerenciar cache em runtime
 - **Gestão de usuários** restrita a administradores, para criar acessos, trocar perfil e ativar/desativar contas
 
-O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend guarda a sessão, envia o token em cada chamada e reage à expiração. Os usuários são criados por um administrador — não há auto-cadastro.
+O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend guarda a sessão, envia o token em cada chamada e reage à expiração. Os usuários são criados por um administrador — não há auto-cadastro. Quem chega sem sessão encontra a landing; quem já tem sessão e abre `/` vai direto para o time da rodada.
 
 ---
 
@@ -29,6 +30,7 @@ O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend 
 | Angular Router | 21.2 | Roteamento com lazy loading |
 | Angular HttpClient | 21.2 | Comunicação HTTP com o backend |
 | SCSS | — | Estilização com CSS custom properties |
+| @angular/ssr + platform-server | 21.2 | Prerender (SSG) da landing no build — sem servidor Node em produção |
 
 ---
 
@@ -64,6 +66,12 @@ open http://localhost:4200
 npm run build
 # Artefatos em dist/cartolaoddsfe/browser/
 ```
+
+O build pré-renderiza a rota `/`: a landing sai pronta no `index.html`, sem esperar o bootstrap
+do Angular. As demais rotas usam o `index.csr.html`, o mesmo shell vazio de sempre — servir a
+landing pré-renderizada como fallback faria quem abre `/time` direto vê-la piscar antes da tela
+carregar. O nginx do `Dockerfile` já faz essa separação; ao servir o `dist` em outro servidor,
+aponte `/` para `index.html` e o fallback de SPA para `index.csr.html`.
 
 ---
 
@@ -143,6 +151,7 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 
 | URL | Tela | Acesso |
 |---|---|---|
+| `/` | Landing pública com apresentação do projeto | Público (com sessão, redireciona para `/time`) |
 | `/login` | Autenticação por e-mail e senha | Público |
 | `/403` | Aviso de acesso restrito | Público |
 | `/time` | Time ideal com formação 4-3-3 | Autenticado |
@@ -156,6 +165,9 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/usuarios/novo` | Cadastro de usuário | **ADMIN** |
 | `/usuarios/:id` | Edição de usuário | **ADMIN** |
 | `/alterar-senha` | Troca da própria senha | Autenticado |
+| `**` | Redireciona para `/` | — |
+
+A raiz usa o `visitanteGuard`, inverso do `authGuard`: libera a landing para quem não tem sessão e encaminha ao `/time` quem já tem. É também para onde vai qualquer URL desconhecida — assim um visitante deslogado nunca cai numa tela de login sem contexto.
 
 As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretendida em `?redirect=` e devolve o usuário a ela depois do login. As de ADMIN somam o `roleGuard(['ADMIN'])`, que leva a `/403` quem não tem o perfil — defesa de experiência, já que a autorização real é a do backend. Os itens "Config" e "Usuários" também só aparecem no menu para ADMIN.
 
@@ -166,11 +178,14 @@ As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretend
 ```
 src/
 ├── main.ts                          # Bootstrap standalone
+├── main.server.ts                   # Entry do prerender da landing (SSG no build)
 ├── index.html
+├── robots.txt
 ├── styles.scss                      # Design system: variáveis CSS globais
 └── app/
-    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error)
-    ├── app.routes.ts                # Rotas com lazy loading e authGuard
+    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error), hidratação
+    ├── app.config.server.ts         # Providers extras usados só no prerender
+    ├── app.routes.ts                # Rotas com lazy loading, guardas e título por rota
     ├── app.component.*              # Shell: navbar + usuário logado + router-outlet
     ├── core/
     │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
@@ -178,6 +193,7 @@ src/
     │   ├── models/usuario.model.ts  # Usuario, requests e envelope de paginação
     │   ├── guards/auth.guard.ts     # Protege as rotas internas
     │   ├── guards/role.guard.ts     # Restringe rotas por perfil (→ /403)
+    │   ├── guards/visitante.guard.ts # Libera a landing só para quem não tem sessão
     │   └── interceptors/
     │       ├── auth.interceptor.ts  # Authorization: Bearer + logout no 401
     │       └── error.interceptor.ts # Tratamento global de erros HTTP
@@ -190,6 +206,11 @@ src/
     │       ├── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
     │       └── orcamento-input/     # Input reutilizável de orçamento (cartoletas) com validação
     └── features/
+        ├── landing/                 # Página pública da raiz — nenhuma faixa chama /api
+        │   ├── _secao.scss          # Mixins das faixas (largura, sobrancelha, foco visível)
+        │   ├── components/          # landing-topo, -hero, -como-funciona, -funcionalidades,
+        │   │                        # -prints, -tecnologia, -rodape
+        │   └── pages/landing-page/  # Compõe as faixas na ordem da página
         ├── auth/
         │   └── pages/
         │       ├── login-page/          # Formulário de login
@@ -281,7 +302,11 @@ npm test -- --code-coverage
 
 | Arquivo de teste | Camada | Cenários |
 |---|---|---|
-| `app.component.spec.ts` | Shell | Navbar, links por perfil, usuário logado, sair, navegação escondida sem sessão |
+| `app.routes.spec.ts` | Rotas | Título declarado em toda rota navegável, título público na raiz, `**` para a landing |
+| `app.component.spec.ts` | Shell | Navbar, links por perfil, usuário logado, sair, navegação escondida sem sessão, layout fluido da landing |
+| `visitante.guard.spec.ts` | Core | Visitante liberado na landing, sessão válida redirecionada a `/time`, token expirado tratado como visitante |
+| `landing-page.component.spec.ts` | Page | Faixas na ordem, um único `h1`, seções nomeadas, zero requisição HTTP, sem promessa de auto-cadastro |
+| `landing-*.component.spec.ts` | Componentes | Âncora do "Como funciona", CTAs para `/login`, cards de funcionalidade e de decisão, prints com `lazy`/`alt`/dimensões, aviso de desvínculo no rodapé |
 | `auth.service.spec.ts` | Core | Login, restauração da sessão, token expirado/sem perfil/malformado, logout, storage indisponível, aviso de token descartado |
 | `auth.interceptor.spec.ts` | Core | Header presente/ausente, login sem header, 401 desloga, 403 mantém sessão, e a cadeia real com o `errorInterceptor` |
 | `auth.guard.spec.ts` | Core | Sessão válida, sem sessão (com `redirect`), token expirado |
@@ -320,6 +345,9 @@ npm test -- --code-coverage
 
 - [`docs/documentacao.md`](./docs/documentacao.md) — documentação técnica completa do frontend
 - [`docs/context.md`](./docs/context.md) — contexto do projeto para desenvolvimento assistido por IA
+- [`docs/prints-da-landing.md`](./docs/prints-da-landing.md) — como refazer as capturas da landing
+
+> **Regra do repositório:** PR que muda a aparência das telas de time, ranking, comparação ou histórico precisa refazer o print correspondente da landing. A página é pública e é a primeira coisa que alguém vê do projeto.
 
 ---
 

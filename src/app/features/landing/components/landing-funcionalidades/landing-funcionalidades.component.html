@@ -1,0 +1,16 @@
+<section class="funcs" id="funcionalidades" aria-labelledby="funcionalidades-titulo">
+  <div class="funcs__inner">
+    <span class="funcs__sobrancelha">O que você recebe</span>
+    <h2 id="funcionalidades-titulo" class="funcs__titulo">Tudo o que o sistema faz pela sua rodada</h2>
+
+    <ul class="funcs__lista">
+      @for (funcionalidade of funcionalidades; track funcionalidade.titulo) {
+        <li class="func">
+          <span class="func__icone" aria-hidden="true">{{ funcionalidade.icone }}</span>
+          <h3 class="func__titulo">{{ funcionalidade.titulo }}</h3>
+          <p class="func__texto">{{ funcionalidade.texto }}</p>
+        </li>
+      }
+    </ul>
+  </div>
+</section>

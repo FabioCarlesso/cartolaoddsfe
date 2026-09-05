@@ -1,3 +1,4 @@
+@if (layoutFluido() === false) {
 <nav class="navbar">
   <div class="navbar-inner">
     <a class="brand" routerLink="/time">
@@ -62,11 +63,14 @@
     }
   </div>
 </nav>
+}
 
-<main class="main-content">
+<main class="main-content" [class.main-content-fluido]="layoutFluido() === true">
   <router-outlet />
 </main>
 
+@if (layoutFluido() === false) {
 <footer class="footer">
   <span>Cartola Odds &mdash; Dados estratégicos para o Cartola FC</span>
 </footer>
+}

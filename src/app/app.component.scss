@@ -112,6 +112,11 @@
   min-height: calc(100vh - 64px - 48px);
 }
 
+// Sem a navbar e sem o rodapé do shell, o conteúdo da rota é a página inteira.
+.main-content-fluido {
+  min-height: 100vh;
+}
+
 .footer {
   border-top: 1px solid var(--border);
   padding: 0.875rem 1.5rem;

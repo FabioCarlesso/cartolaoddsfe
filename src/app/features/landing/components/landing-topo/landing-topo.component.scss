@@ -1,0 +1,79 @@
+@use '../../secao';
+
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 15, 26, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.topo__inner {
+  @include secao.faixa-interna;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 64px;
+}
+
+.topo__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  @include secao.foco-visivel;
+
+  .topo__icone {
+    font-size: 1.5rem;
+  }
+
+  .topo__nome {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .topo__nome-destaque {
+    color: var(--green-primary);
+  }
+}
+
+.topo__acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topo__link {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 0.15s ease, background 0.15s ease;
+  @include secao.foco-visivel;
+
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.btn {
+  @include secao.foco-visivel;
+}
+
+// A 480px o link textual sai para o "Entrar" caber inteiro ao lado da marca; o mesmo destino
+// continua alcançável pela rolagem e pelo índice da própria página.
+@media (max-width: 480px) {
+  .topo__link {
+    display: none;
+  }
+
+  .topo__marca .topo__nome {
+    font-size: 1.05rem;
+  }
+}

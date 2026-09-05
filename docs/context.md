@@ -55,7 +55,8 @@ Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/aut
 | HTTP | `HttpClient` com interceptor funcional |
 | Forms | `ReactiveFormsModule` não usado — apenas `FormsModule` para dois filtros simples |
 | State | Local component state (signals/NgRx não são necessários ainda) |
-| Routing | Lazy loading por `loadComponent` |
+| Routing | Lazy loading por `loadComponent`; cada rota declara o próprio `title` |
+| SSG | `@angular/ssr` + `platform-server` pré-renderizam só a rota `/` no build (sem servidor Node) |
 | Build | esbuild via `@angular-devkit/build-angular:application` |
 
 ---
@@ -70,6 +71,7 @@ src/app/
 │   ├── models/usuario.model.ts              ← Usuario, requests e Pagina<T>
 │   ├── guards/auth.guard.ts                 ← protege as rotas internas, guarda ?redirect=
 │   ├── guards/role.guard.ts                 ← restringe rota por perfil (→ /403)
+│   ├── guards/visitante.guard.ts            ← libera a landing só para quem não tem sessão
 │   └── interceptors/
 │       ├── auth.interceptor.ts              ← Authorization: Bearer + logout no 401
 │       └── error.interceptor.ts             ← mapeia erros HTTP → mensagens PT-BR
@@ -88,6 +90,11 @@ src/app/
 │       ├── alert-banner/           ← banner tipo warning/error/info/success
 │       └── orcamento-input/        ← input reutilizável de orçamento (cartoletas)
 └── features/
+    ├── landing/                     ← página pública da raiz (nenhuma faixa chama /api)
+    │   ├── _secao.scss              ← mixins das faixas (largura, sobrancelha, foco visível)
+    │   ├── components/              ← landing-topo, -hero, -como-funciona, -funcionalidades,
+    │   │                              -prints, -tecnologia, -rodape (um componente por faixa)
+    │   └── pages/landing-page/      ← compõe as faixas na ordem da página
     ├── auth/
     │   └── pages/
     │       ├── login-page/         ← formulário reativo de login
@@ -166,6 +173,24 @@ error: (err) => {
   this.loading = false;
 }
 ```
+
+### Landing pública, prerender e layout do shell
+
+A rota `''` carrega a landing com o `visitanteGuard` (com sessão válida, redireciona para
+`/time`) e `data: { layoutFluido: true }`. O `AppComponent` lê esse dado da rota mais profunda a
+cada `NavigationEnd` e esconde a própria navbar e o próprio rodapé — a landing traz os seus e as
+faixas sangram de ponta a ponta. Uma rota nova com layout fluido só precisa declarar o `data`.
+
+Nenhum componente da landing pode injetar serviço que chame `/api`: a página precisa renderizar
+inteira com o backend desligado, e há teste que reprova qualquer requisição aberta na montagem.
+Essa restrição é também o que permite pré-renderizá-la no build (`prerender-routes.txt` lista só
+`/`): o HTML da landing sai pronto, e o `index.csr.html` continua sendo o shell das demais rotas.
+
+O `layoutFluido` fica `undefined` até a primeira navegação terminar e, nesse intervalo, o shell
+não desenha cabeçalho nem rodapé — assumir "rota normal" fazia a navbar piscar sobre a landing
+pré-renderizada e empurrar a página 64px para baixo.
+As capturas em `src/assets/landing/` são das telas reais e têm regra de manutenção própria em
+`docs/prints-da-landing.md`.
 
 ### Sessão e autorização
 

@@ -1,0 +1,20 @@
+<section class="como" id="como-funciona" aria-labelledby="como-funciona-titulo">
+  <div class="como__inner">
+    <span class="como__sobrancelha">Como funciona</span>
+    <h2 id="como-funciona-titulo" class="como__titulo">Da cotação da casa ao time escalado</h2>
+    <p class="como__intro">
+      Quatro passos, executados a cada rodada. Você abre o sistema com o time já montado.
+    </p>
+
+    <ol class="como__passos">
+      @for (passo of passos; track passo.titulo; let i = $index) {
+        <li class="passo">
+          <span class="passo__numero" aria-hidden="true">{{ i + 1 }}</span>
+          <span class="passo__icone" aria-hidden="true">{{ passo.icone }}</span>
+          <h3 class="passo__titulo">{{ passo.titulo }}</h3>
+          <p class="passo__texto">{{ passo.texto }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>

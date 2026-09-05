@@ -25,6 +25,7 @@
 16. [Build e Deploy](#16-build-e-deploy)
 17. [Docker](#17-docker)
 18. [Testes](#18-testes)
+19. [Feature: Landing Pública](#19-feature-landing-pública)
 
 ---
 
@@ -112,7 +113,7 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 
 | Path | Componente carregado | Guarda |
 |---|---|---|
-| `/` | Redireciona para `/time` | — |
+| `/` | `LandingPageComponent` | `visitanteGuard` |
 | `/login` | `LoginPageComponent` | — |
 | `/403` | `ForbiddenPageComponent` | — |
 | `/time` | `TimePageComponent` | `authGuard` |
@@ -126,7 +127,13 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 | `/usuarios/novo` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/usuarios/:id` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/alterar-senha` | `AlterarSenhaPageComponent` | `authGuard` |
-| `**` | Redireciona para `/time` | — |
+| `**` | Redireciona para `/` | — |
+
+A raiz é pública e traz o próprio cabeçalho e rodapé, então declara `data: { layoutFluido: true }`
+— o `AppComponent` lê esse dado a cada `NavigationEnd` e sai da frente (ver [Shell](#shell)).
+
+Uma URL desconhecida cai em `/`, e não em `/time`: com sessão, o `visitanteGuard` encaminha ao
+time; sem sessão, o visitante para na landing em vez de numa tela de login sem contexto.
 
 ---
 
@@ -209,6 +216,17 @@ Isto é defesa de **experiência**, não de segurança: quem editar o `localStor
 tela, mas a API recusa a operação. A autorização real é sempre a do `SecurityConfig` no
 backend.
 
+### `core/guards/visitante.guard.ts`
+
+Inverso do `authGuard`: libera a rota apenas para quem **não** tem sessão. Quem já está logado e
+abre `/` — o bookmark mais comum de quem usa o app todo dia — recebe um `UrlTree` para `/time`,
+em vez da página de apresentação.
+
+```typescript
+export const visitanteGuard: CanActivateFn = () =>
+  authService.isAuthenticated() ? router.createUrlTree(['/time']) : true;
+```
+
 ### `features/auth/pages/`
 
 | Página | Rota | Papel |
@@ -222,6 +240,11 @@ backend.
 O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
 (atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config" e "Usuários" só aparecem
 para o perfil `ADMIN`.
+
+Rotas marcadas com `data: { layoutFluido: true }` — hoje só a landing — trazem o próprio
+cabeçalho e o próprio rodapé, e o shell esconde os seus. O `AppComponent` acompanha o dado da
+rota mais profunda a cada `NavigationEnd` (`layoutFluido`, um `toSignal` sobre `router.events`),
+em vez de comparar a URL: uma nova rota fluida só precisa declarar o `data`.
 
 Como ADMIN o cabeçalho carrega sete links mais o nome e o **Sair**, e por isso degrada em
 etapas: até 1120px aperta o espaçamento, até 1000px deixa os links só com o ícone, até 640px
@@ -828,10 +851,40 @@ npm test           # Testes com Karma/Jasmine
 Usa o builder esbuild (`@angular-devkit/build-angular:application`), padrão do Angular 21:
 
 - **Output:** `dist/cartolaoddsfe/`
-- **Entry:** `src/main.ts`
+- **Entry:** `src/main.ts` (navegador) e `src/main.server.ts` (prerender)
 - **Styles:** `src/styles.scss`
 - **Polyfills:** `zone.js`
 - **Output hashing:** habilitado em produção
+
+### Prerender da landing (SSG)
+
+A rota `/` é pré-renderizada no build: o HTML da landing sai pronto do `npm run build`, sem
+esperar o bootstrap do Angular no navegador. Não há servidor Node em produção — `ssr` fica
+desligado e o deploy continua sendo o nginx servindo arquivos estáticos.
+
+```jsonc
+// angular.json → architect.build.options
+"server": "src/main.server.ts",
+"prerender": { "discoverRoutes": false, "routesFile": "prerender-routes.txt" },
+"ssr": false
+```
+
+`discoverRoutes: false` é deliberado: descobrir as rotas automaticamente faria o build tentar
+pré-renderizar as telas internas, que exigem sessão e chamam a API — sem backend no build, elas
+congelariam uma tela de erro no HTML. O `prerender-routes.txt` lista só a raiz.
+
+O build gera **dois** HTML na pasta `browser/`:
+
+| Arquivo | Conteúdo | Quem serve |
+|---|---|---|
+| `index.html` | Landing pré-renderizada, com as marcas de hidratação | `location = /` no nginx |
+| `index.csr.html` | Shell com `<app-root></app-root>` vazio | Fallback de SPA das demais rotas |
+
+A separação evita o efeito colateral do prerender: se o fallback devolvesse o `index.html`, quem
+abrisse `/time` direto veria a landing por um instante antes de a aplicação assumir a tela.
+
+O `provideClientHydration()` no `app.config.ts` faz o Angular reaproveitar o HTML pré-renderizado
+em vez de descartá-lo e desenhar tudo de novo.
 
 ### Variáveis de Ambiente
 
@@ -1023,3 +1076,61 @@ npm test -- --watch
 ---
 
 *Documentação atualizada em 2026 — Projeto Cartola Odds Frontend.*
+
+---
+
+## 19. Feature: Landing Pública
+
+Arquivos: `src/app/features/landing/`
+
+Página da raiz, dirigida a duas audiências ao mesmo tempo: o cartoleiro, que precisa entender em
+segundos o que o sistema faz por ele, e quem avalia o projeto tecnicamente.
+
+### Estrutura
+
+```
+features/landing/
+├── _secao.scss                      # Mixins: faixa, faixa-interna, sobrancelha, título, foco
+├── components/
+│   ├── landing-topo/                # Barra pública: marca, "Como funciona", "Entrar"
+│   ├── landing-hero/                # Proposta de valor, CTAs (login e GitHub)
+│   ├── landing-como-funciona/       # Pipeline em 4 passos (#como-funciona)
+│   ├── landing-funcionalidades/     # Cards das capacidades reais do sistema
+│   ├── landing-prints/              # Galeria das telas (#telas)
+│   ├── landing-tecnologia/          # Stack, decisões de arquitetura e os dois repositórios
+│   └── landing-rodape/              # Autoria, licença e aviso de desvínculo
+└── pages/landing-page/              # Compõe as faixas na ordem da página
+```
+
+Cada faixa é um componente próprio: o conteúdo da página muda com frequência e por motivos
+diferentes (produto, stack, capturas), e separar mantém cada mudança em um arquivo só.
+
+### Independência da API
+
+**Nenhum componente da landing injeta serviço que chame `/api`.** É requisito, não detalhe: a
+landing é a primeira tela de quem chega pelo link — inclusive de um recrutador — e é justamente
+quando o backend pode estar desligado ou em cold start. O teste
+`should render without issuing a single HTTP request` monta a página com o
+`HttpTestingController` e chama `verify()`; qualquer requisição aberta reprova.
+
+### Acessibilidade e SEO
+
+- Um único `h1` (o título do hero); cada `<section>` nomeada por `aria-labelledby` apontando para
+  um título existente.
+- Foco visível em todos os links e botões (mixin `foco-visivel`): o anel padrão do Chrome é preto
+  e sumiria no fundo escuro do tema.
+- Textos de corpo em `--text-secondary`, e não em `--text-muted`, que não alcança os 4,5:1 da
+  WCAG 1.4.3 nos tamanhos usados.
+- `title`, `meta description`, Open Graph e Twitter Card ficam estáticos no `index.html`, e o
+  título da landing é o que fica na aba da página pública. Cada rota interna declara o próprio
+  `title` (ver [Roteamento](#3-roteamento)), senão esse texto de divulgação ficaria na aba de
+  todas as telas do sistema.
+- `robots.txt` (`src/robots.txt`) libera a raiz e bloqueia `/api/`.
+- A landing é pré-renderizada no build (ver [Build e Deploy](#16-build-e-deploy)), então o
+  crawler recebe o conteúdo no HTML — e o visitante vê a página antes de o Angular inicializar.
+
+### Capturas das telas
+
+As imagens de `src/assets/landing/` são das telas reais, capturadas contra uma API de
+demonstração com dados fictícios. O procedimento e a regra de manutenção estão em
+[`prints-da-landing.md`](./prints-da-landing.md).
