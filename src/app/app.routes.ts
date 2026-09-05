@@ -1,12 +1,20 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { visitanteGuard } from './core/guards/visitante.guard';
 
 export const routes: Routes = [
   {
+    // A landing é pública e roda sem a navbar do sistema — `layoutFluido` avisa o shell
+    // disso, para as faixas sangrarem de ponta a ponta.
     path: '',
-    redirectTo: 'time',
-    pathMatch: 'full'
+    pathMatch: 'full',
+    canActivate: [visitanteGuard],
+    data: { layoutFluido: true },
+    loadComponent: () =>
+      import('./features/landing/pages/landing-page/landing-page.component').then(
+        (m) => m.LandingPageComponent
+      )
   },
   {
     path: 'login',
@@ -111,7 +119,10 @@ export const routes: Routes = [
       )
   },
   {
+    // URL desconhecida cai na raiz, e não em `/time`: para o visitante deslogado o destino é a
+    // landing, e para quem tem sessão o `visitanteGuard` encaminha ao time — nos dois casos o
+    // usuário para numa tela que faz sentido, sem passar por uma de login sem contexto.
     path: '**',
-    redirectTo: 'time'
+    redirectTo: ''
   }
 ];

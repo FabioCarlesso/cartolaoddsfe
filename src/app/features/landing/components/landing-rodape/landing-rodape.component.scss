@@ -1,0 +1,40 @@
+@use '../../secao';
+
+.rodape {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 2.5rem 0;
+}
+
+.rodape__inner {
+  @include secao.faixa-interna;
+}
+
+.rodape__linha {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.rodape__link {
+  color: var(--green-primary);
+  font-weight: 600;
+  @include secao.foco-visivel;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// O aviso é conteúdo, não decoração: fica em `--text-secondary` (8,4:1 sobre `--bg-secondary`)
+// e não em `--text-muted`, que não alcança os 4,5:1 da WCAG 1.4.3 neste tamanho.
+.rodape__aviso {
+  margin-top: 1rem;
+  max-width: 80ch;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}

@@ -35,6 +35,7 @@ Thumbs.db
 # Arquivos de desenvolvimento
 *.spec.ts
 karma.conf.js
+scripts/
 
 # Git
 .git/

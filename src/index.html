@@ -2,9 +2,34 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <title>Cartola Odds</title>
+  <title>Cartola Odds — o time da rodada montado com as odds do Brasileirão</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!--
+    Descrição e Open Graph são estáticos de propósito: a aplicação não tem SSR, então tags
+    escritas em runtime pelo serviço `Meta` do Angular não chegam ao crawler do WhatsApp nem ao
+    do LinkedIn. Como só a landing é pública, um conjunto fixo apontando para ela resolve a
+    pré-visualização do link. A imagem é relativa porque o domínio de produção ainda não está
+    fixado; ao publicar em um domínio próprio, troque por URL absoluta — parte dos crawlers não
+    resolve caminho relativo.
+  -->
+  <meta name="description" content="Cartola Odds monta o time da rodada cruzando as odds do Brasileirão com o desempenho recente dos atletas: escalação na sua formação, dentro do seu orçamento de cartoletas, com ranking, comparação de formações e histórico de acertos.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Cartola Odds">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Cartola Odds — o time da rodada montado com as odds do Brasileirão">
+  <meta property="og:description" content="As odds das casas de aposta viram chance de vitória, viram score por atleta e viram escalação: o time de maior pontuação esperada na sua formação e dentro das suas cartoletas.">
+  <meta property="og:image" content="assets/landing/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Tela do Cartola Odds com o time da rodada escalado no campo.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cartola Odds — o time da rodada montado com as odds do Brasileirão">
+  <meta name="twitter:description" content="As odds das casas de aposta viram chance de vitória, viram score por atleta e viram escalação: o time de maior pontuação esperada na sua formação e dentro das suas cartoletas.">
+  <meta name="twitter:image" content="assets/landing/og.png">
+
+  <meta name="theme-color" content="#0a0f1a">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

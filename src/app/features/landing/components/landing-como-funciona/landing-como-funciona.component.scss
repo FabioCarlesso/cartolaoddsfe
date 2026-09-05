@@ -1,0 +1,86 @@
+@use '../../secao';
+
+.como {
+  @include secao.faixa;
+  background: var(--bg-secondary);
+  border-block: 1px solid var(--border);
+}
+
+.como__inner {
+  @include secao.faixa-interna;
+}
+
+.como__sobrancelha {
+  @include secao.sobrancelha;
+}
+
+.como__titulo {
+  @include secao.titulo-secao;
+}
+
+.como__intro {
+  margin-top: 0.75rem;
+  max-width: 60ch;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.como__passos {
+  margin-top: 2.5rem;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.passo {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.passo__numero {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--border-light);
+}
+
+.passo__icone {
+  display: block;
+  font-size: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.passo__titulo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.passo__texto {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1024px) {
+  .como__passos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .como__passos {
+    grid-template-columns: 1fr;
+  }
+}

@@ -70,6 +70,7 @@ src/app/
 │   ├── models/usuario.model.ts              ← Usuario, requests e Pagina<T>
 │   ├── guards/auth.guard.ts                 ← protege as rotas internas, guarda ?redirect=
 │   ├── guards/role.guard.ts                 ← restringe rota por perfil (→ /403)
+│   ├── guards/visitante.guard.ts            ← libera a landing só para quem não tem sessão
 │   └── interceptors/
 │       ├── auth.interceptor.ts              ← Authorization: Bearer + logout no 401
 │       └── error.interceptor.ts             ← mapeia erros HTTP → mensagens PT-BR
@@ -88,6 +89,11 @@ src/app/
 │       ├── alert-banner/           ← banner tipo warning/error/info/success
 │       └── orcamento-input/        ← input reutilizável de orçamento (cartoletas)
 └── features/
+    ├── landing/                     ← página pública da raiz (nenhuma faixa chama /api)
+    │   ├── _secao.scss              ← mixins das faixas (largura, sobrancelha, foco visível)
+    │   ├── components/              ← landing-topo, -hero, -como-funciona, -funcionalidades,
+    │   │                              -prints, -tecnologia, -rodape (um componente por faixa)
+    │   └── pages/landing-page/      ← compõe as faixas na ordem da página
     ├── auth/
     │   └── pages/
     │       ├── login-page/         ← formulário reativo de login
@@ -166,6 +172,18 @@ error: (err) => {
   this.loading = false;
 }
 ```
+
+### Landing pública e layout do shell
+
+A rota `''` carrega a landing com o `visitanteGuard` (com sessão válida, redireciona para
+`/time`) e `data: { layoutFluido: true }`. O `AppComponent` lê esse dado da rota mais profunda a
+cada `NavigationEnd` e esconde a própria navbar e o próprio rodapé — a landing traz os seus e as
+faixas sangram de ponta a ponta. Uma rota nova com layout fluido só precisa declarar o `data`.
+
+Nenhum componente da landing pode injetar serviço que chame `/api`: a página precisa renderizar
+inteira com o backend desligado, e há teste que reprova qualquer requisição aberta na montagem.
+As capturas em `src/assets/landing/` são das telas reais e têm regra de manutenção própria em
+`docs/prints-da-landing.md`.
 
 ### Sessão e autorização
 
@@ -335,6 +353,8 @@ Se o backend estiver em `localhost:8080` no host, **nenhuma configuração adici
 
 ## Próximas Melhorias Previstas
 
+- [ ] Pré-renderizar a landing (SSG) — sem isso o Lighthouse mobile fica na casa dos 85 pontos de
+      performance, limitado pelo bootstrap do Angular, e não por peso de imagem ou de CSS
 - [ ] Dark/light mode toggle
 - [ ] Página de dashboard com resumo de todas as features
 - [ ] Gráficos de score por posição (Chart.js ou D3)

@@ -1,0 +1,91 @@
+@use '../../secao';
+
+.hero {
+  @include secao.faixa;
+  padding-top: 6rem;
+  // O verde do sistema aparece como brilho de campo atrás do título, sem imagem para baixar.
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(34, 197, 94, 0.16), transparent 70%),
+    var(--bg-primary);
+}
+
+.hero__inner {
+  @include secao.faixa-interna;
+  max-width: 860px;
+  text-align: center;
+}
+
+.hero__sobrancelha {
+  @include secao.sobrancelha;
+}
+
+.hero__titulo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.hero__destaque {
+  color: var(--green-primary);
+}
+
+.hero__subtitulo {
+  margin: 1.5rem auto 0;
+  max-width: 60ch;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.hero__acoes {
+  margin-top: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.875rem;
+}
+
+.hero__cta {
+  padding: 0.85rem 2rem;
+  font-size: 1rem;
+  @include secao.foco-visivel;
+}
+
+.hero__nota {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding-top: 4rem;
+  }
+
+  .hero__titulo {
+    font-size: 2.4rem;
+  }
+
+  .hero__subtitulo {
+    font-size: 1rem;
+  }
+
+  // Alvo de toque cheio no celular, no lugar de dois botões espremidos lado a lado.
+  .hero__acoes {
+    flex-direction: column;
+  }
+
+  .hero__cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .hero__titulo {
+    font-size: 2rem;
+  }
+}

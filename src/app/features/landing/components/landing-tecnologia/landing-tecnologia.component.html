@@ -1,0 +1,56 @@
+<section class="tec" id="tecnologia" aria-labelledby="tecnologia-titulo">
+  <div class="tec__inner">
+    <span class="tec__sobrancelha">Por baixo do capô</span>
+    <h2 id="tecnologia-titulo" class="tec__titulo">A engenharia por trás da escalação</h2>
+    <p class="tec__intro">
+      Projeto pessoal de ponta a ponta: API, frontend, banco, containerização e deploy. O código
+      dos dois lados é público.
+    </p>
+
+    <div class="tec__stacks">
+      <div class="stack">
+        <h3 class="stack__titulo">Backend</h3>
+        <ul class="stack__itens">
+          @for (item of backend; track item) {
+            <li class="stack__item">{{ item }}</li>
+          }
+        </ul>
+      </div>
+      <div class="stack">
+        <h3 class="stack__titulo">Frontend</h3>
+        <ul class="stack__itens">
+          @for (item of frontend; track item) {
+            <li class="stack__item">{{ item }}</li>
+          }
+        </ul>
+      </div>
+      <div class="stack">
+        <h3 class="stack__titulo">Infraestrutura</h3>
+        <ul class="stack__itens">
+          @for (item of infra; track item) {
+            <li class="stack__item">{{ item }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+
+    <ul class="tec__decisoes">
+      @for (decisao of decisoes; track decisao.titulo) {
+        <li class="decisao">
+          <h3 class="decisao__titulo">{{ decisao.titulo }}</h3>
+          <p class="decisao__texto">{{ decisao.texto }}</p>
+        </li>
+      }
+    </ul>
+
+    <div class="tec__repos">
+      @for (repo of repositorios; track repo.nome) {
+        <a class="repo" [href]="repo.url" target="_blank" rel="noopener">
+          <span class="repo__nome">{{ repo.nome }}</span>
+          <span class="repo__descricao">{{ repo.descricao }}</span>
+          <span class="repo__acao">Ver no GitHub &rarr;</span>
+        </a>
+      }
+    </div>
+  </div>
+</section>
