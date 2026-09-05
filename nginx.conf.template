@@ -11,6 +11,11 @@ server {
                text/xml application/xml application/xml+rss text/javascript;
     gzip_min_length 1024;
 
+    # Headers de segurança para respostas geradas no nível server, antes de
+    # qualquer location casar (400, 413, 414). Cada location abaixo declara
+    # os seus próprios add_header e por isso não herda estes.
+    include /etc/nginx/snippets/security-headers.conf;
+
     # Angular SPA — redireciona qualquer rota para index.html
     location / {
         try_files $uri $uri/ /index.html;
@@ -43,6 +48,14 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout  30s;
         proxy_connect_timeout 10s;
+
+        # Fallback: só preenche quando o nginx gera a resposta sozinho
+        # (502/504 com o backend fora do ar). Se o backend respondeu, os
+        # valores mapeados ficam vazios e nada é adicionado — as respostas
+        # de /api/ seguem carregando só o que o Spring Security define.
+        add_header X-Frame-Options        $fallback_x_frame_options always;
+        add_header X-Content-Type-Options $fallback_x_content_type_options always;
+        add_header Referrer-Policy        $fallback_referrer_policy always;
     }
 
     # Suprimir log de favicon 404
