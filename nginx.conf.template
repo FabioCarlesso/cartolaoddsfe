@@ -11,10 +11,19 @@ server {
                text/xml application/xml application/xml+rss text/javascript;
     gzip_min_length 1024;
 
+    # Headers de segurança para respostas geradas no nível server, antes de
+    # qualquer location casar (400, 413, 414). Cada location abaixo declara
+    # os seus próprios add_header e por isso não herda estes.
+    include /etc/nginx/snippets/security-headers.conf;
+
     # Angular SPA — redireciona qualquer rota para index.html
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+
+        # Headers de segurança (não são herdados do nível server pois este
+        # location já define add_header Cache-Control)
+        include /etc/nginx/snippets/security-headers.conf;
     }
 
     # Assets estáticos — cache longo
@@ -22,9 +31,14 @@ server {
         expires 1y;
         add_header Cache-Control "public, immutable";
         access_log off;
+
+        # Headers de segurança (não são herdados do nível server pois este
+        # location já define add_header Cache-Control)
+        include /etc/nginx/snippets/security-headers.conf;
     }
 
-    # Proxy reverso para o backend
+    # Proxy reverso para o backend — repassa somente os headers de
+    # segurança definidos pelo Spring Security, sem sobreposição do nginx
     location /api/ {
         proxy_pass ${BACKEND_URL}/api/;
         proxy_http_version 1.1;
@@ -34,14 +48,20 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout  30s;
         proxy_connect_timeout 10s;
+
+        # Fallback: só preenche quando o nginx gera a resposta sozinho
+        # (502/504 com o backend fora do ar). Se o backend respondeu, os
+        # valores mapeados ficam vazios e nada é adicionado — as respostas
+        # de /api/ seguem carregando só o que o Spring Security define.
+        add_header X-Frame-Options        $fallback_x_frame_options always;
+        add_header X-Content-Type-Options $fallback_x_content_type_options always;
+        add_header Referrer-Policy        $fallback_referrer_policy always;
     }
 
-    # Headers de segurança
-    add_header X-Frame-Options         "SAMEORIGIN"   always;
-    add_header X-Content-Type-Options  "nosniff"      always;
-    add_header X-XSS-Protection        "1; mode=block" always;
-    add_header Referrer-Policy         "strict-origin-when-cross-origin" always;
-
     # Suprimir log de favicon 404
-    location = /favicon.ico { log_not_found off; access_log off; }
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
 }

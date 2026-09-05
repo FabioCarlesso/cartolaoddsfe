@@ -15,6 +15,8 @@ FROM nginx:1.27-alpine AS runtime
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY nginx-api-header-fallback.conf /etc/nginx/conf.d/00-api-header-fallback.conf
 COPY --from=build /app/dist/cartolaoddsfe/browser /usr/share/nginx/html
 
 RUN chown -R appuser:appgroup /usr/share/nginx/html \

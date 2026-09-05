@@ -885,7 +885,7 @@ Configurações habilitadas:
 | Proxy `/api/` | Proxia para `${BACKEND_URL}/api/` — sem CORS em produção |
 | Cache de assets | `Cache-Control: public, immutable` por 1 ano para JS/CSS/fontes |
 | Gzip | Compressão habilitada para `text/*`, `application/json`, `application/javascript` |
-| Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy` |
+| Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` — definidos em `nginx-security-headers.conf` e incluídos em cada `location` do SPA. Em `/api/` valem os headers do Spring Security; o nginx só preenche como fallback quando gera a resposta sozinho (502/504). `X-XSS-Protection` não é enviado: o auditor XSS legado foi removido dos navegadores e o backend define `0` deliberadamente |
 
 ### Variáveis de Ambiente
 
