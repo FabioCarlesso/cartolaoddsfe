@@ -18,9 +18,7 @@ server {
 
         # Headers de segurança (não são herdados do nível server pois este
         # location já define add_header Cache-Control)
-        add_header X-Frame-Options        "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        include /etc/nginx/snippets/security-headers.conf;
     }
 
     # Assets estáticos — cache longo
@@ -31,9 +29,7 @@ server {
 
         # Headers de segurança (não são herdados do nível server pois este
         # location já define add_header Cache-Control)
-        add_header X-Frame-Options        "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        include /etc/nginx/snippets/security-headers.conf;
     }
 
     # Proxy reverso para o backend — repassa somente os headers de
@@ -50,5 +46,9 @@ server {
     }
 
     # Suprimir log de favicon 404
-    location = /favicon.ico { log_not_found off; access_log off; }
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+        include /etc/nginx/snippets/security-headers.conf;
+    }
 }
