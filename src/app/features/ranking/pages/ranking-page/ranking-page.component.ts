@@ -104,17 +104,17 @@ interface PosicaoOption {
               </tr>
             </thead>
             <tbody>
-              @for (atleta of data.atletas; track atleta.apelido; let i = $index) {
-                <tr class="ranking-row" [class.row-doubt]="atleta.emDuvida" [class.top-3]="i < 3">
+              @for (atleta of atletasPagina; track atleta.apelido; let i = $index) {
+                <tr class="ranking-row" [class.row-doubt]="atleta.emDuvida" [class.top-3]="paginaAtual === 1 && i < 3">
                   <td class="td-rank">
-                    @if (i === 0) {
+                    @if (paginaAtual === 1 && i === 0) {
                       <span class="medal gold">&#129351;</span>
-                    } @else if (i === 1) {
+                    } @else if (paginaAtual === 1 && i === 1) {
                       <span class="medal silver">&#129352;</span>
-                    } @else if (i === 2) {
+                    } @else if (paginaAtual === 1 && i === 2) {
                       <span class="medal bronze">&#129353;</span>
                     } @else {
-                      <span class="rank-num">{{ i + 1 }}</span>
+                      <span class="rank-num">{{ (paginaAtual - 1) * itensPorPagina + i + 1 }}</span>
                     }
                   </td>
                   <td class="td-player">
@@ -161,6 +161,24 @@ interface PosicaoOption {
             </tbody>
           </table>
         </div>
+
+        @if (data.atletas.length > 0) {
+          <div class="pagination-bar">
+            <button
+              class="btn btn-secondary"
+              (click)="paginaAnterior()"
+              [disabled]="!temPaginaAnterior">
+              &#8592; Anterior
+            </button>
+            <span class="pagination-info">Página {{ paginaAtual }} de {{ totalPaginas }}</span>
+            <button
+              class="btn btn-secondary"
+              (click)="proximaPagina()"
+              [disabled]="!temProximaPagina">
+              Próxima &#8594;
+            </button>
+          </div>
+        }
 
         @if (data.atletas.length === 0) {
           <div class="empty-state">
@@ -431,6 +449,20 @@ interface PosicaoOption {
       }
     }
 
+    .pagination-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .pagination-info {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
     @media (max-width: 768px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
       .filters-left { flex-direction: column; }
@@ -449,6 +481,9 @@ export class RankingPageComponent implements OnInit {
   limiteSelecionado = 25;
   excluirDuvida = false;
 
+  readonly itensPorPagina = 10;
+  paginaAtual = 1;
+
   posicoes: PosicaoOption[] = [
     { value: '', label: 'Todas as posições' },
     { value: 'GOL', label: 'Goleiro (GOL)' },
@@ -466,6 +501,7 @@ export class RankingPageComponent implements OnInit {
   buscar(): void {
     this.loading = true;
     this.error = '';
+    this.paginaAtual = 1;
     this.rankingService
       .getRanking(this.posicaoSelecionada || undefined, this.limiteSelecionado, this.excluirDuvida)
       .subscribe({
@@ -482,6 +518,41 @@ export class RankingPageComponent implements OnInit {
 
   scorePercent(atleta: Atleta): number {
     return getScorePercent(atleta.score);
+  }
+
+  get totalPaginas(): number {
+    if (!this.data || this.data.atletas.length === 0) {
+      return 1;
+    }
+    return Math.ceil(this.data.atletas.length / this.itensPorPagina);
+  }
+
+  get atletasPagina(): Atleta[] {
+    if (!this.data) {
+      return [];
+    }
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
+    return this.data.atletas.slice(inicio, inicio + this.itensPorPagina);
+  }
+
+  get temPaginaAnterior(): boolean {
+    return this.paginaAtual > 1;
+  }
+
+  get temProximaPagina(): boolean {
+    return this.paginaAtual < this.totalPaginas;
+  }
+
+  paginaAnterior(): void {
+    if (this.temPaginaAnterior) {
+      this.paginaAtual--;
+    }
+  }
+
+  proximaPagina(): void {
+    if (this.temProximaPagina) {
+      this.paginaAtual++;
+    }
   }
 
   get scoreContextMessage(): string {

@@ -169,4 +169,86 @@ describe('RankingPageComponent', () => {
     fixture.detectChanges();
     expect(component.data?.avisoMercado).toBe('Mercado fechado.');
   });
+
+  describe('paginação', () => {
+    const manyAtletas: Atleta[] = Array.from({ length: 25 }, (_, i) =>
+      makeAtleta({ apelido: `Atleta ${i + 1}`, score: 25 - i })
+    );
+    const bigRanking: RankingResponse = { ...mockRanking, atletas: manyAtletas };
+
+    beforeEach(() => {
+      mockRankingService.getRanking.and.returnValue(of(bigRanking));
+      component.buscar();
+      fixture.detectChanges();
+    });
+
+    it('should start on page 1', () => {
+      expect(component.paginaAtual).toBe(1);
+    });
+
+    it('should compute total pages based on itensPorPagina', () => {
+      expect(component.totalPaginas).toBe(3);
+    });
+
+    it('should show only itensPorPagina atletas on the first page', () => {
+      expect(component.atletasPagina.length).toBe(component.itensPorPagina);
+      expect(component.atletasPagina[0].apelido).toBe('Atleta 1');
+    });
+
+    it('should disable "anterior" and enable "próxima" on first page', () => {
+      expect(component.temPaginaAnterior).toBeFalse();
+      expect(component.temProximaPagina).toBeTrue();
+    });
+
+    it('should navigate to the next page', () => {
+      component.proximaPagina();
+      expect(component.paginaAtual).toBe(2);
+      expect(component.atletasPagina[0].apelido).toBe('Atleta 11');
+    });
+
+    it('should navigate back to the previous page', () => {
+      component.proximaPagina();
+      component.paginaAnterior();
+      expect(component.paginaAtual).toBe(1);
+    });
+
+    it('should not advance past the last page', () => {
+      component.proximaPagina();
+      component.proximaPagina();
+      component.proximaPagina();
+      expect(component.paginaAtual).toBe(3);
+      expect(component.temProximaPagina).toBeFalse();
+    });
+
+    it('should not go before the first page', () => {
+      component.paginaAnterior();
+      expect(component.paginaAtual).toBe(1);
+    });
+
+    it('should show the remaining atletas on the last page', () => {
+      component.proximaPagina();
+      component.proximaPagina();
+      expect(component.atletasPagina.length).toBe(5);
+    });
+
+    it('should reset to page 1 when a filter changes and buscar is called', () => {
+      component.proximaPagina();
+      expect(component.paginaAtual).toBe(2);
+
+      component.posicaoSelecionada = 'ATA';
+      component.buscar();
+      expect(component.paginaAtual).toBe(1);
+    });
+
+    it('should render pagination controls in the DOM', () => {
+      const info = fixture.nativeElement.querySelector('.pagination-info');
+      expect(info.textContent).toContain('Página 1 de 3');
+    });
+
+    it('should disable the "anterior" button in the DOM on the first page', () => {
+      const buttons = fixture.nativeElement.querySelectorAll('.pagination-bar button');
+      expect(buttons[0].disabled).toBeTrue();
+      expect(buttons[1].disabled).toBeFalse();
+    });
+  });
 });
