@@ -182,6 +182,12 @@ describe('CotaPageComponent', () => {
     expect(component.reinicios.length).toBe(1);
     expect(fixture.nativeElement.querySelectorAll('polyline.consumo-line').length).toBe(2);
     expect(fixture.nativeElement.querySelectorAll('line.reinicio-line').length).toBe(1);
+    // O rotulo saiu do SVG para nao ser esticado pelo preserveAspectRatio="none".
+    const marca = fixture.nativeElement.querySelector('.chart-reinicio');
+    expect(marca.textContent).toContain('renovação');
+    expect(fixture.nativeElement.querySelector('svg text')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('1 renovação de cota');
+    expect(fixture.nativeElement.textContent).not.toContain('renovação(ões)');
   });
 
   it('should ignore readings without consumoMes, which measured nothing', async () => {
@@ -207,5 +213,48 @@ describe('CotaPageComponent', () => {
     expect(primeiro.y).toBe(67);
     expect(component.primeiroInstante).toBe('2025-06-01T10:00:00');
     expect(component.ultimoInstante).toBe('2025-06-02T10:00:00');
+  });
+
+  it('should space the points by time, not by position in the list', async () => {
+    // Duas leituras coladas e uma três dias depois: espaçado por índice, o ponto do meio
+    // cairia no centro do gráfico e o intervalo longo pareceria igual ao curto.
+    await montar(cotaSaudavel, historico([
+      leitura('2025-06-01T00:00:00', 10),
+      leitura('2025-06-01T06:00:00', 20),
+      leitura('2025-06-04T00:00:00', 60)
+    ]));
+
+    const [a, b, c] = component.consumoPontos;
+    const util = 320 - 24 * 2;
+    expect(a.x).toBe(24);
+    // 6h de 72h = 1/12 da janela.
+    expect(b.x).toBeCloseTo(24 + util / 12, 5);
+    expect(c.x).toBe(24 + util);
+    // percentX acompanha, para os rótulos HTML caírem sobre a linha.
+    expect(a.percentX).toBeCloseTo((a.x / 320) * 100, 5);
+  });
+
+  it('should fall back to even spacing when every reading shares one instant', async () => {
+    await montar(cotaSaudavel, historico([
+      leitura('2025-06-01T10:00:00', 10),
+      leitura('2025-06-01T10:00:00', 20),
+      leitura('2025-06-01T10:00:00', 30)
+    ]));
+
+    const xs = component.consumoPontos.map((p) => p.x);
+    expect(xs).toEqual([24, 160, 296]);
+  });
+
+  it('should summarise the chart in the aria-label instead of naming the figure', async () => {
+    await montar(cotaSaudavel, historico([
+      leitura('2025-06-28T10:00:00', 400),
+      leitura('2025-07-01T10:00:00', 5, true),
+      leitura('2025-07-02T10:00:00', 20)
+    ]));
+
+    const svg = fixture.nativeElement.querySelector('svg.consumo-chart');
+    expect(svg.getAttribute('aria-label')).toBe(
+      'Consumo de requisições em 3 leituras, de 400 a 20, com 1 renovação de cota'
+    );
   });
 });

@@ -36,7 +36,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         userMessage =
           'Falha ao comunicar com uma API externa (Cartola FC ou Odds API). Tente novamente em instantes.';
       } else if (error.status >= 500) {
-        userMessage = error.error?.mensagem || 'Erro interno do servidor.';
+        // Diferente do 400/409/422/429, onde `mensagem` é um texto que o backend escreveu
+        // para o usuário ler, um 500 é falha não prevista: ali o handler global cai no
+        // `getMessage()` da exceção, que já chegou à tela com o SQL e os nomes das colunas
+        // de uma falha de JDBC. Nada disso ajuda quem está olhando, e descreve o schema
+        // para quem não deveria vê-lo — então a mensagem do servidor não é repassada.
+        userMessage = 'Erro interno do servidor.';
       }
 
       // A mensagem é anexada à própria instância de HttpErrorResponse, e não a uma cópia:

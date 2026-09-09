@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { CotaResponse, CotaHistoricoResponse, LeituraCota } from '../../../../shared/models/cota.model';
+import { CotaResponse, LeituraCota } from '../../../../shared/models/cota.model';
 import { CotaService } from '../../services/cota.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { AlertBannerComponent } from '../../../../shared/components/alert-banner/alert-banner.component';
@@ -14,9 +14,17 @@ interface ConsumoPonto {
   consumo: number;
   x: number;
   y: number;
+  /** Fração horizontal do card (0–100), para posicionar rótulos HTML sobre o SVG. */
+  percentX: number;
   /** Primeira leitura de um ciclo novo: a linha quebra aqui em vez de despencar. */
   reinicio: boolean;
 }
+
+/** Limites do desenho dentro do `viewBox`. */
+const PAD_X = 24;
+const LARGURA = 320;
+const TOPO_Y = 16;
+const BASE_Y = 118;
 
 @Component({
   selector: 'app-cota-page',
@@ -184,29 +192,36 @@ interface ConsumoPonto {
             <app-alert-banner [message]="historicoError" type="warning" />
           } @else if (consumoPontos.length >= 2) {
             <div class="grafico-card">
-              <svg class="consumo-chart" viewBox="0 0 320 140" preserveAspectRatio="none"
-                   role="img" aria-label="Gráfico do consumo de requisições ao longo da janela">
-                <!-- Uma polilinha por ciclo: a renovação da cota quebra a linha em vez de
-                     desenhar uma queda que pareceria erro de coleta. -->
-                @for (segmento of consumoSegmentos; track $index) {
-                  <polyline class="consumo-line" [attr.points]="segmento" fill="none" />
-                }
+              <!-- Os rótulos ficam em HTML sobreposto, e não em <text> dentro do SVG: o
+                   preserveAspectRatio="none" estica o viewBox de 320 até a largura da tela,
+                   e a mesma escala não-uniforme que faz a linha preencher o card deformava
+                   cada letra na horizontal. Sobre o SVG eles usam a escala normal da página. -->
+              <div class="chart-wrap">
+                <svg class="consumo-chart" viewBox="0 0 320 140" preserveAspectRatio="none"
+                     role="img" [attr.aria-label]="resumoAcessivel">
+                  <!-- Uma polilinha por ciclo: a renovação da cota quebra a linha em vez de
+                       desenhar uma queda que pareceria erro de coleta. -->
+                  @for (segmento of consumoSegmentos; track $index) {
+                    <polyline class="consumo-line" [attr.points]="segmento" fill="none"
+                              vector-effect="non-scaling-stroke" />
+                  }
+                  @for (r of reinicios; track r.instante) {
+                    <line class="reinicio-line" [attr.x1]="r.x" y1="12" [attr.x2]="r.x" y2="118"
+                          vector-effect="non-scaling-stroke" />
+                  }
+                </svg>
+
+                <span class="chart-label chart-max">{{ consumoMaximo | number:'1.0-0' }}</span>
+                <span class="chart-label chart-inicio">{{ primeiroInstante | date:'dd/MM' }}</span>
+                <span class="chart-label chart-fim">{{ ultimoInstante | date:'dd/MM' }}</span>
                 @for (r of reinicios; track r.instante) {
-                  <line class="reinicio-line" [attr.x1]="r.x" y1="12" [attr.x2]="r.x" y2="118" />
-                  <text class="reinicio-label" [attr.x]="r.x" y="9" text-anchor="middle">
-                    renovação
-                  </text>
+                  <span class="chart-label chart-reinicio" [style.left.%]="r.percentX">renovação</span>
                 }
-                <text class="eixo-label" x="8" y="16">{{ consumoMaximo | number:'1.0-0' }}</text>
-                <text class="eixo-label" x="8" y="132">{{ primeiroInstante | date:'dd/MM' }}</text>
-                <text class="eixo-label" x="312" y="132" text-anchor="end">
-                  {{ ultimoInstante | date:'dd/MM' }}
-                </text>
-              </svg>
+              </div>
               <p class="grafico-legenda">
                 {{ consumoPontos.length | number:'1.0-0' }} leituras na janela
                 @if (reinicios.length > 0) {
-                  &bull; {{ reinicios.length }} renovação(ões) de cota
+                  &bull; {{ reinicios.length }} {{ reinicios.length === 1 ? 'renovação' : 'renovações' }} de cota
                 }
               </p>
             </div>
@@ -403,16 +418,39 @@ interface ConsumoPonto {
       padding: 1.25rem 1.5rem;
     }
 
+    /* Os rótulos são posicionados em % sobre este wrapper. Como o SVG estica linearmente
+       o eixo X do viewBox até a largura toda, x / 320 é exatamente a fração horizontal
+       do card — a marca de renovação cai em cima da linha tracejada que a representa. */
+    .chart-wrap {
+      position: relative;
+    }
+
     .consumo-chart {
+      display: block;
       width: 100%;
       height: 180px;
-      overflow: visible;
     }
 
     .consumo-line { stroke: var(--green-primary); stroke-width: 2; }
     .reinicio-line { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 3 3; }
-    .reinicio-label { fill: var(--gold); font-size: 8px; }
-    .eixo-label { fill: var(--text-muted); font-size: 9px; }
+
+    .chart-label {
+      position: absolute;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .chart-max { top: 0; left: 0; }
+    .chart-inicio { bottom: 0; left: 0; }
+    .chart-fim { bottom: 0; right: 0; }
+
+    .chart-reinicio {
+      top: 0;
+      transform: translateX(-50%);
+      color: var(--gold);
+    }
 
     .grafico-legenda {
       margin-top: 0.75rem;
@@ -442,7 +480,6 @@ export class CotaPageComponent implements OnInit {
   private cotaService = inject(CotaService);
 
   cota: CotaResponse | null = null;
-  historico: CotaHistoricoResponse | null = null;
   loading = false;
   error = '';
   /** Falha do histórico não derruba a tela: os sete campos do estado atual valem sozinhos. */
@@ -503,6 +540,25 @@ export class CotaPageComponent implements OnInit {
     return Math.max(0, Math.min(100, (this.cota.saldoRestante / total) * 100));
   }
 
+  /**
+   * O que o gráfico diz, em texto. Os rótulos saíram do SVG para não serem esticados, e um
+   * `aria-label` fixo descreveria a figura sem informar nada — aqui vai o conteúdo.
+   */
+  get resumoAcessivel(): string {
+    if (this.consumoPontos.length < 2) {
+      return 'Gráfico do consumo de requisições ao longo da janela';
+    }
+    const inicio = this.consumoPontos[0].consumo;
+    const fim = this.consumoPontos[this.consumoPontos.length - 1].consumo;
+    const renovacoes = this.reinicios.length === 1
+      ? ', com 1 renovação de cota'
+      : this.reinicios.length > 1
+        ? `, com ${this.reinicios.length} renovações de cota`
+        : '';
+    return `Consumo de requisições em ${this.consumoPontos.length} leituras, `
+      + `de ${inicio} a ${fim}${renovacoes}`;
+  }
+
   get primeiroInstante(): string | null {
     return this.consumoPontos[0]?.instante ?? null;
   }
@@ -515,7 +571,6 @@ export class CotaPageComponent implements OnInit {
     this.historicoError = '';
     this.cotaService.getHistorico(JANELA_DIAS).subscribe({
       next: (data) => {
-        this.historico = data;
         this.montarGrafico(data.leituras ?? []);
       },
       error: (err) => {
@@ -543,22 +598,33 @@ export class CotaPageComponent implements OnInit {
       return;
     }
 
-    const valores = medidas.map((l) => l.consumoMes as number);
-    const max = Math.max(...valores);
+    const max = Math.max(...medidas.map((l) => l.consumoMes as number));
     const escala = max || 1;
-    const padX = 24;
-    const usableW = 320 - padX * 2;
-    const topY = 16;
-    const bottomY = 118;
+    const usableW = LARGURA - PAD_X * 2;
+
+    // O eixo X é proporcional ao tempo, e não à posição na lista. As leituras nascem de
+    // chamadas ao provedor, que se concentram quando o sistema é usado: espaçadas por
+    // índice, um intervalo de três dias sem leitura ocuparia a mesma largura que um de
+    // três minutos, e o gráfico do mês mentiria sobre quando o consumo aconteceu.
+    const tempos = medidas.map((l) => new Date(l.instante).getTime());
+    const inicio = tempos[0];
+    const duracao = tempos[tempos.length - 1] - inicio;
 
     this.consumoMaximo = max;
-    this.consumoPontos = medidas.map((l, i) => ({
-      instante: l.instante,
-      consumo: l.consumoMes as number,
-      x: padX + (usableW * i) / (medidas.length - 1),
-      y: bottomY - ((l.consumoMes as number) / escala) * (bottomY - topY),
-      reinicio: l.reinicioDeCota
-    }));
+    this.consumoPontos = medidas.map((l, i) => {
+      // Toda a janela no mesmo instante (ou instante ilegível) não define proporção:
+      // aí o espaçamento por índice é o que resta, e não distorce nada.
+      const fracao = duracao > 0 ? (tempos[i] - inicio) / duracao : i / (medidas.length - 1);
+      const x = PAD_X + usableW * fracao;
+      return {
+        instante: l.instante,
+        consumo: l.consumoMes as number,
+        x,
+        y: BASE_Y - ((l.consumoMes as number) / escala) * (BASE_Y - TOPO_Y),
+        percentX: (x / LARGURA) * 100,
+        reinicio: l.reinicioDeCota
+      };
+    });
     this.reinicios = this.consumoPontos.filter((p) => p.reinicio);
     this.consumoSegmentos = this.montarSegmentos(this.consumoPontos);
   }

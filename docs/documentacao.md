@@ -283,7 +283,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 | `422` | Pool vazio — ODD_LIMITE restritivo ou sem API Key (usa `error.mensagem` quando presente) |
 | `429` | Freio de força bruta do backend (usa `error.mensagem`, que informa quanto falta) |
 | `502` | Falha na API externa (Cartola FC ou Odds API) |
-| `5xx` | Erro interno do servidor |
+| `5xx` | `Erro interno do servidor.` — **fixa: a `mensagem` do backend não é repassada** |
+
+> O `5xx` é o único caso em que a mensagem do backend é descartada de propósito. Nos demais
+> (`400`, `409`, `422`, `429`) o `mensagem` é um texto escrito para o usuário ler; num `500` o
+> handler global da API cai no `getMessage()` da exceção, e isso já chegou à tela com o SQL e os
+> nomes das colunas de uma falha de JDBC — não ajuda quem está olhando e descreve o schema para
+> quem não deveria vê-lo.
 
 ---
 
@@ -758,14 +764,25 @@ Sem leitura, as três devolvem `null` e a barra de saldo nem é desenhada.
 `HistoricoPageComponent` — o projeto não tem biblioteca de charts e não precisa ganhar uma para
 algumas centenas de pontos.
 
-Três decisões do desenho:
+Cinco decisões do desenho:
 
 - **A escala vertical parte de zero**, e não do menor valor da janela: é consumo acumulado no
   ciclo, e ancorar no mínimo exageraria variações de poucas requisições.
+- **O eixo X é proporcional ao tempo**, e não à posição na lista. As leituras nascem de chamadas
+  ao provedor, que se concentram quando o sistema é usado: espaçadas por índice, um intervalo de
+  três dias sem leitura ocuparia a mesma largura que um de três minutos, e o gráfico do mês
+  mentiria sobre quando o consumo aconteceu. Quando a janela inteira cai no mesmo instante não há
+  proporção a respeitar, e aí o espaçamento por índice é o que resta.
 - **A linha quebra em cada `reinicioDeCota`**, produzindo uma polilinha por ciclo mais uma marca
   tracejada. A renovação da cota derruba o `consumoMes` para perto de zero; desenhada como uma
   descida, pareceria falha de coleta. A API já detecta a virada comparando com a leitura
   anterior, então o frontend não reimplementa a heurística.
+- **Os rótulos são HTML sobreposto, não `<text>` dentro do SVG.** O `preserveAspectRatio="none"`
+  estica o `viewBox` de 320 até a largura da tela para a linha preencher o card, e a mesma escala
+  não-uniforme deformava cada letra na horizontal. Fora do SVG eles usam a escala normal da
+  página; o posicionamento é `left: percentX%`, e como o eixo X é esticado linearmente,
+  `x / 320` é exatamente a fração horizontal do card. O `aria-label` do SVG passou a resumir a
+  série em texto (`resumoAcessivel`), já que os números deixaram de estar nele.
 - **Leituras sem `consumoMes` não entram na série** — aquela resposta não trouxe o header e não
   mediu nada.
 

@@ -160,6 +160,27 @@ describe('errorInterceptor', () => {
     );
   });
 
+  it('should not leak the server message of a 500 to the user', (done) => {
+    // O handler global da API cai no getMessage() da excecao num 500, e isso ja chegou a
+    // tela com o SQL e os nomes das colunas de uma falha de JDBC.
+    const vazamento =
+      'JDBC exception executing SQL [select och1_0.id,och1_0.consumo_mes from odds_cota_historico och1_0] '
+      + '[ERROR: relation "odds_cota_historico" does not exist]';
+
+    http.get('/api/test').subscribe({
+      error: (err) => {
+        expect(err.userMessage).toBe('Erro interno do servidor.');
+        expect(err.userMessage).not.toContain('select');
+        expect(err.userMessage).not.toContain('odds_cota_historico');
+        done();
+      }
+    });
+    httpMock.expectOne('/api/test').flush(
+      { mensagem: vazamento },
+      { status: 500, statusText: 'Internal Server Error' }
+    );
+  });
+
   it('should pass through successful responses unchanged', (done) => {
     http.get('/api/test').subscribe({
       next: (data) => {
