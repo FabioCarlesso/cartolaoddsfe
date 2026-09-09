@@ -161,6 +161,7 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 | `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real | Autenticado |
 | `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) | Autenticado |
 | `/admin` | Configurações de negócio e gerenciamento de cache | **ADMIN** |
+| `/cota` | Estado da cota da The Odds API, guardrail e consumo do ciclo | **ADMIN** |
 | `/usuarios` | Listagem de usuários com ações de editar e ativar/desativar | **ADMIN** |
 | `/usuarios/novo` | Cadastro de usuário | **ADMIN** |
 | `/usuarios/:id` | Edição de usuário | **ADMIN** |
@@ -169,7 +170,7 @@ Se o backend rodar em `localhost:8080`, o padrão `BACKEND_URL=http://host.docke
 
 A raiz usa o `visitanteGuard`, inverso do `authGuard`: libera a landing para quem não tem sessão e encaminha ao `/time` quem já tem. É também para onde vai qualquer URL desconhecida — assim um visitante deslogado nunca cai numa tela de login sem contexto.
 
-As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretendida em `?redirect=` e devolve o usuário a ela depois do login. As de ADMIN somam o `roleGuard(['ADMIN'])`, que leva a `/403` quem não tem o perfil — defesa de experiência, já que a autorização real é a do backend. Os itens "Config" e "Usuários" também só aparecem no menu para ADMIN.
+As rotas autenticadas são protegidas pelo `authGuard`, que guarda a URL pretendida em `?redirect=` e devolve o usuário a ela depois do login. As de ADMIN somam o `roleGuard(['ADMIN'])`, que leva a `/403` quem não tem o perfil — defesa de experiência, já que a autorização real é a do backend. Os itens "Config", "Cota" e "Usuários" também só aparecem no menu para ADMIN.
 
 ---
 
@@ -244,8 +245,11 @@ src/
         └── admin/
             ├── services/
             │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
-            │   └── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
-            └── pages/admin-page/            # Formulário de config + painel de cache
+            │   ├── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
+            │   └── cota.service.ts          # GET /api/odds/cota e /api/odds/cota/historico
+            └── pages/
+                ├── admin-page/              # Formulário de config + painel de cache
+                └── cota-page/               # Estado da cota, guardrail e gráfico do consumo
 ```
 
 ---
@@ -266,6 +270,7 @@ Toda chamada a `/api/**` sai com `Authorization: Bearer <token>`, exceto o próp
 | `HistoricoService` | `GET /api/historico`, `GET /api/historico/{rodadaId}`, `POST /api/historico/{rodadaId}/atualizar-pontuacao` |
 | `ConfiguracaoService` | `GET /api/config`, `PATCH /api/config`, `POST /api/config/reset` |
 | `CacheService` | `DELETE /api/cache`, `DELETE /api/cache/{nome}` |
+| `CotaService` | `GET /api/odds/cota`, `GET /api/odds/cota/historico?dias=N` (restrito a ADMIN) |
 
 ---
 
@@ -312,6 +317,8 @@ npm test -- --code-coverage
 | `auth.guard.spec.ts` | Core | Sessão válida, sem sessão (com `redirect`), token expirado |
 | `role.guard.spec.ts` | Core | ADMIN permitido, USER para `/403`, visitante e sessão expirada para `/login` |
 | `usuario.service.spec.ts` | Service | Listagem paginada, busca, criação, PATCH parcial, desativar/ativar, `409` |
+| `cota.service.spec.ts` | Service | GET de estado e histórico, param `dias` opcional, campos anuláveis preservados, `reinicioDeCota`, `403` |
+| `cota-page.component.spec.ts` | Page | Saldo/consumo/margem, "sem leitura ainda" no lugar de zero, guardrail armado com `proximaSondagem`, histórico falhando sem derrubar a tela, quebra da linha na renovação de cota |
 | `usuarios-page.component.spec.ts` | Page | Listagem, situação, confirmação antes de desativar, `409` do último ADMIN, reativação, estado vazio |
 | `usuario-form-page.component.spec.ts` | Page | Validações, criação, edição sem senha, PATCH só do que mudou, `409` de e-mail e das regras de ADMIN |
 | `login-page.component.spec.ts` | Page | Submissão válida, credencial inválida, carregando, sessão expirada, senha alterada, `redirect` interno e externo, parâmetros chegando com a tela montada |

@@ -28,6 +28,13 @@ describe('routes', () => {
     expect(raiz?.title).toBe('Cartola Odds — o time da rodada montado com as odds do Brasileirão');
   });
 
+  it('should guard the admin-only routes with authGuard and roleGuard', () => {
+    for (const path of ['admin', 'cota', 'usuarios']) {
+      const rota = routes.find((r: Route) => r.path === path);
+      expect(rota?.canActivate?.length).withContext(`rota /${path}`).toBe(2);
+    }
+  });
+
   it('should send unknown URLs to the landing route', () => {
     expect(routes.find((rota) => rota.path === '**')?.redirectTo).toBe('');
   });
