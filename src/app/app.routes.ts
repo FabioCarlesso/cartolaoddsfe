@@ -103,6 +103,15 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'cota',
+    title: 'Cartola Odds — Cota da The Odds API',
+    canActivate: [authGuard, roleGuard(['ADMIN'])],
+    loadComponent: () =>
+      import('./features/admin/pages/cota-page/cota-page.component').then(
+        (m) => m.CotaPageComponent
+      )
+  },
+  {
     path: 'usuarios',
     title: 'Cartola Odds — Usuários',
     canActivate: [authGuard, roleGuard(['ADMIN'])],

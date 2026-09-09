@@ -18,7 +18,7 @@
 9. [Feature: Time](#9-feature-time)
 10. [Feature: Ranking](#10-feature-ranking)
 11. [Feature: Favoritos](#11-feature-favoritos)
-12. [Feature: Admin (Config + Cache)](#12-feature-admin-config--cache)
+12. [Feature: Admin (Config + Cache + Cota)](#12-feature-admin-config--cache--cota)
 13. [Feature: Usuários](#13-feature-usuários)
 14. [Design System](#14-design-system)
 15. [Proxy de Desenvolvimento](#15-proxy-de-desenvolvimento)
@@ -123,6 +123,7 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 | `/historico` | `HistoricoPageComponent` | `authGuard` |
 | `/historico/:rodadaId` | `HistoricoDetalhePageComponent` | `authGuard` |
 | `/admin` | `AdminPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
+| `/cota` | `CotaPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/usuarios` | `UsuariosPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/usuarios/novo` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
 | `/usuarios/:id` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
@@ -429,6 +430,18 @@ invalidateByName(nome: string): Observable<CacheResponse>
 
 Caches disponíveis: `odds`, `atletas`, `clubes`, `partidas`, `pontuados`, `statusMercado`.
 
+### `CotaService`
+
+```typescript
+getCota(): Observable<CotaResponse>
+// GET /api/odds/cota
+
+getHistorico(dias?: number): Observable<CotaHistoricoResponse>
+// GET /api/odds/cota/historico?dias=N  — sem o parâmetro, a API aplica o padrão de 30 dias
+```
+
+Os dois endpoints são restritos a `ADMIN`.
+
 ---
 
 ## 8. Componentes Compartilhados
@@ -610,7 +623,7 @@ probEmpate(jogo: JogoFavorito): number {
 
 ---
 
-## 12. Feature: Admin (Config + Cache)
+## 12. Feature: Admin (Config + Cache + Cota)
 
 ### Estrutura
 
@@ -618,9 +631,13 @@ probEmpate(jogo: JogoFavorito): number {
 features/admin/
 ├── services/
 │   ├── configuracao.service.ts    # GET/PATCH /api/config, POST /api/config/reset
-│   └── cache.service.ts           # DELETE /api/cache, DELETE /api/cache/{nome}
-└── pages/admin-page/
-    └── admin-page.component.ts    # Tela unificada de configuração e cache
+│   ├── cache.service.ts           # DELETE /api/cache, DELETE /api/cache/{nome}
+│   └── cota.service.ts            # GET /api/odds/cota, GET /api/odds/cota/historico
+└── pages/
+    ├── admin-page/
+    │   └── admin-page.component.ts  # Tela unificada de configuração e cache
+    └── cota-page/
+        └── cota-page.component.ts   # Estado da cota, guardrail e consumo do ciclo
 ```
 
 ### `AdminPageComponent`
@@ -704,6 +721,90 @@ interface CacheResponse {
   timestamp: string;
 }
 ```
+
+### `CotaPageComponent`
+
+Tela de consulta do consumo da The Odds API — o único componente pago da stack. Sem ela, saber
+se o guardrail de cota está armado exigiria chamar `GET /api/odds/cota` à mão, ou perceber que a
+escalação parou de filtrar por favorito.
+
+A tela abre pelo estado do guardrail, que é o que muda o que fazer a seguir: armado, a API parou
+de chamar o provedor e serve o último snapshot conhecido, e a escalação continua saindo com odds
+que envelhecem. Nesse estado a tela mostra `proximaSondagem` — quando o guardrail se destrava
+sozinho, que é a única pergunta que sobra.
+
+#### `null` não é zero
+
+`saldoRestante`, `consumoMes`, `ultimaLeitura`, `ultimaSondagem` e `proximaSondagem` chegam
+`null` enquanto nenhuma leitura de header ocorreu desde o boot da API. A tela mostra
+**"sem leitura ainda"** nesses casos, em itálico e com cor de texto secundário — nunca `0`.
+Saldo baixo e saldo não lido são estados diferentes: renderizar `0` afirmaria "cota esgotada"
+no exato momento em que a informação correta é "ainda não perguntamos".
+
+Pela mesma razão, as grandezas derivadas são `number | null`:
+
+```typescript
+get margemAteMinimo(): number | null  // saldoRestante - minRequestsRemaining
+get cotaCiclo(): number | null        // saldoRestante + consumoMes (tamanho do plano)
+get percentSaldo(): number | null     // fatia da cota do ciclo ainda disponível
+```
+
+Sem leitura, as três devolvem `null` e a barra de saldo nem é desenhada.
+
+#### Gráfico do consumo
+
+`GET /api/odds/cota/historico?dias=30` traz a série das leituras em ordem cronológica. O gráfico
+é SVG inline no `viewBox` `0 0 320 140`, no mesmo padrão do `evolucao-chart` do
+`HistoricoPageComponent` — o projeto não tem biblioteca de charts e não precisa ganhar uma para
+algumas centenas de pontos.
+
+Três decisões do desenho:
+
+- **A escala vertical parte de zero**, e não do menor valor da janela: é consumo acumulado no
+  ciclo, e ancorar no mínimo exageraria variações de poucas requisições.
+- **A linha quebra em cada `reinicioDeCota`**, produzindo uma polilinha por ciclo mais uma marca
+  tracejada. A renovação da cota derruba o `consumoMes` para perto de zero; desenhada como uma
+  descida, pareceria falha de coleta. A API já detecta a virada comparando com a leitura
+  anterior, então o frontend não reimplementa a heurística.
+- **Leituras sem `consumoMes` não entram na série** — aquela resposta não trouxe o header e não
+  mediu nada.
+
+Os pontos são calculados uma vez no carregamento (`montarGrafico()`), e não em getters: a janela
+padrão traz centenas de leituras e o template varre a lista várias vezes por ciclo de detecção.
+
+#### Falha do histórico não derruba a tela
+
+`carregarHistorico()` grava em `historicoError`, separado do `error` do estado atual. O histórico
+é o extra; os sete campos do estado corrente são a maior parte do valor da tela e continuam
+visíveis mesmo quando a série não vem.
+
+#### Modelos
+
+```typescript
+interface CotaResponse {
+  saldoRestante: number | null;
+  consumoMes: number | null;
+  ultimaLeitura: string | null;
+  minRequestsRemaining: number;
+  guardrailAtivo: boolean;
+  ultimaSondagem: string | null;
+  proximaSondagem: string | null;
+}
+
+interface LeituraCota {
+  instante: string;
+  saldoRestante: number | null;
+  consumoMes: number | null;
+  reinicioDeCota: boolean;
+}
+
+interface CotaHistoricoResponse {
+  dias: number; desde: string; total: number; leituras: LeituraCota[];
+}
+```
+
+Os instantes são `LocalDateTime` sem offset, na hora local do servidor — mesmo formato do
+`updatedAt` do `/api/config`, e exibidos com `DatePipe` como os demais.
 
 ---
 
@@ -1058,6 +1159,8 @@ mockTimeService.getTime.and.returnValue(of(mockTime));
 | `configuracao.service.spec.ts` | GET /api/config, PATCH com body, POST /api/config/reset, erros HTTP |
 | `cache.service.spec.ts` | DELETE /api/cache (todos), DELETE /api/cache/{nome}, erro 400 nome inválido |
 | `admin-page.component.spec.ts` | Load config, sync form, salvar, resetar, invalidarTodos, invalidarCache, somasPesos, pesosValidos, erros |
+| `cota.service.spec.ts` | GET /api/odds/cota, GET /historico com e sem `dias`, campos anuláveis preservados, `reinicioDeCota`, `403` |
+| `cota-page.component.spec.ts` | Saldo/consumo/margem, "sem leitura ainda" no lugar de zero, guardrail armado com `proximaSondagem`, histórico falhando sem derrubar a tela, segmento por ciclo e marca de renovação, escala ancorada em zero |
 
 ### Comandos
 

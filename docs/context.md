@@ -35,6 +35,8 @@ Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/aut
 | GET | `/api/time/comparar` | Monta e compara o melhor time entre múltiplas formações |
 | GET | `/api/ranking` | Lista atletas ordenados por score |
 | GET | `/api/favoritos` | Times favoritos por odds da rodada |
+| GET | `/api/odds/cota` | Estado da cota da The Odds API e do guardrail — restrito a ADMIN |
+| GET | `/api/odds/cota/historico` | Série das leituras de cota na janela — restrito a ADMIN |
 
 ### Parâmetros relevantes
 
@@ -42,6 +44,15 @@ Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/aut
 - `GET /api/favoritos?oddLimite=3.0` — customiza o limite de odd para ser considerado favorito
 - Se `oddLimite` não for enviado, o backend usa o valor de `application.properties` (padrão: 3.0)
 - `GET /api/time/comparar?formacoes=4-3-3&formacoes=3-4-3&orcamento=120` — um parâmetro `formacoes` por formação (2 a 5) e `orcamento` opcional; resposta com `melhorFormacao` e `resultados` ordenados por `scoreTotal`
+- `GET /api/odds/cota/historico?dias=30` — janela de 1 a 92 dias, padrão 30; a série não é agregada (30 dias ≈ 500 itens)
+
+#### Cota da The Odds API: `null` não é zero
+
+`saldoRestante`, `consumoMes`, `ultimaLeitura`, `ultimaSondagem` e `proximaSondagem` vêm `null` quando nenhuma leitura de header ocorreu desde o boot da API. A `/cota` mostra "sem leitura ainda" nesses casos: renderizar `0` diria "cota esgotada" no exato momento em que a informação correta é "ainda não perguntamos" — e as duas situações pedem reações opostas.
+
+Cada leitura do histórico traz `reinicioDeCota`, que a API calcula comparando com a leitura anterior. O gráfico quebra a linha nesses pontos em vez de desenhar a queda do consumo, que pareceria falha de coleta.
+
+Os instantes são `LocalDateTime` sem offset, na hora local do servidor — o mesmo formato de `updatedAt` do `/api/config`.
 
 ---
 

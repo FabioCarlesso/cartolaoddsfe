@@ -65,12 +65,13 @@ describe('AppComponent', () => {
       (a) => a.textContent
     );
 
-    expect(textos.length).toBe(7);
+    expect(textos.length).toBe(8);
     expect(textos.some((t) => t?.includes('Config'))).toBeTrue();
+    expect(textos.some((t) => t?.includes('Cota'))).toBeTrue();
     expect(textos.some((t) => t?.includes('Usuários'))).toBeTrue();
   });
 
-  it('should hide Config and Usuários from a USER', async () => {
+  it('should hide Config, Cota and Usuários from a USER', async () => {
     const fixture = await montar({ ...sessao, perfil: 'USER' });
     const textos = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.nav-links a')).map(
       (a) => a.textContent
@@ -78,6 +79,7 @@ describe('AppComponent', () => {
 
     expect(textos.length).toBe(5);
     expect(textos.some((t) => t?.includes('Config'))).toBeFalse();
+    expect(textos.some((t) => t?.includes('Cota'))).toBeFalse();
     expect(textos.some((t) => t?.includes('Usuários'))).toBeFalse();
   });
 
