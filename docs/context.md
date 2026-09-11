@@ -4,9 +4,10 @@
 > refletidas na UI — o *porquê* das coisas. Leia antes de qualquer tarefa neste repositório,
 > inclusive em desenvolvimento assistido por IA.
 >
-> O *o quê* mora nos outros dois: [`../README.md`](../README.md) diz o que é o projeto e como
-> rodá-lo; [`documentacao.md`](./documentacao.md) é a referência técnica (rotas, componentes,
-> serviços, modelos, build, Docker, testes).
+> O *o quê* mora ao lado: [`../README.md`](../README.md) diz o que é o projeto e como rodá-lo, e
+> os demais arquivos de `docs/` são a referência técnica — o índice em
+> [`README.md`](./README.md) diz qual deles é dono de cada assunto, e é onde registrar em qual
+> arquivo documentar uma mudança.
 
 ---
 
@@ -31,7 +32,7 @@ A lista de telas e o que cada uma entrega está na [visão geral do README](../R
 
 Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/auth/login`. A
 relação de endpoints consumidos, com parâmetros e o serviço que chama cada um, está em
-[Serviços HTTP](./documentacao.md#7-serviços-http).
+[Serviços HTTP](./funcionalidades.md#serviços-http).
 
 O backend é a autoridade sobre autorização, paginação e valores padrão de parâmetros omitidos
 (ex.: `oddLimite` cai no valor de `application.properties`). O frontend não replica nenhuma
@@ -58,7 +59,7 @@ porquê de cada escolha:
 | SSG só da rota `/` (`@angular/ssr` + `platform-server`) | Entrega a landing pronta no HTML sem precisar de servidor Node em produção (ver [Landing pública, prerender e layout do shell](#landing-pública-prerender-e-layout-do-shell)) |
 | esbuild (`@angular-devkit/build-angular:application`) | Builder padrão do Angular 21 |
 
-A estrutura de pastas correspondente está em [Arquitetura](./documentacao.md#1-arquitetura).
+A estrutura de pastas correspondente está em [`arquitetura.md`](./arquitetura.md).
 
 ---
 
@@ -87,7 +88,7 @@ constructor(private service: MyService) {} // ← evitar
 - Retornam `Observable<T>` — sem conversão para Promise
 - URL base sempre `/api` (resolve via proxy em dev)
 - O mapeamento do formato da API para os models do frontend é responsabilidade do serviço, não
-  do componente: os templates nunca veem o formato raw (ver [`TimeService`](./documentacao.md#timeservice))
+  do componente: os templates nunca veem o formato raw (ver [`TimeService`](./funcionalidades.md#timeservice))
 
 ### Estado local
 
@@ -117,7 +118,7 @@ error: (err) => {
 A ordem dos interceptors não é detalhe de estilo: o `errorInterceptor` devolve a **mesma
 instância** de `HttpErrorResponse`, porque o `authInterceptor` reconhece o `401` de sessão pelo
 `instanceof` — uma cópia o desligaria em silêncio. O mapeamento status → mensagem está em
-[Interceptor de Erros](./documentacao.md#5-interceptor-de-erros).
+[Interceptor de Erros](./funcionalidades.md#interceptor-de-erros).
 
 ### Landing pública, prerender e layout do shell
 
@@ -177,7 +178,7 @@ e foi descartado pelo custo frente ao perfil de uso — aplicação pessoal, sem
 
 Tema escuro football inspirado em campo de futebol, definido em `src/styles.scss` via CSS custom
 properties. A paleta completa, as classes utilitárias globais e a tipografia estão em
-[Design System](./documentacao.md#14-design-system).
+[`design-system.md`](./design-system.md).
 
 **Regras:**
 - Nunca hardcode de cores nos componentes — sempre usar variáveis CSS (`var(--green-primary)`)
@@ -224,13 +225,13 @@ properties. A paleta completa, as classes utilitárias globais e a tipografia es
 - A API pode enviar metadados opcionais (`criterioScore`, `scoreCriterio`, `tipoScore`, `estrategiaScore`, `descricaoScore`, `pesosScore`) para explicar o cálculo usado
 - Se não houver metadados, o frontend mostra fallback visual por posição: goleiros como critério defensivo, atacantes como critério ofensivo e demais posições como critério padrão da API
 - Máximo assumido de 12 pontos para a barra de progresso; scores acima de 12 ficam em 100% da
-  barra (fórmula em [`PlayerCardComponent`](./documentacao.md#playercardcomponent))
+  barra (fórmula em [`PlayerCardComponent`](./funcionalidades.md#playercardcomponent))
 
 ### Indicador de Consistência (desvio padrão)
 
 - A API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`, tanto em `/api/time` quanto em `/api/ranking` — são os nomes oficiais de `AtletaDto`/`AtletaRankingDto`, sem sinônimos —, e `pesoDesvio` existe em `/api/config`
 - Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico), o desvio não é calculável e o frontend exibe o badge neutro ⚪ — degradação graciosa
-- A classificação é centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`); as faixas de desvio e o comportamento do badge estão em [`ConsistenciaBadgeComponent`](./documentacao.md#consistenciabadgecomponent)
+- A classificação é centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`); as faixas de desvio e o comportamento do badge estão em [`ConsistenciaBadgeComponent`](./funcionalidades.md#consistenciabadgecomponent)
 - A configuração `pesoDesvio` (0.0–1.0, padrão 0.05) controla a penalidade no backend; editável no `/admin`
 
 > **Sobre a conferência do contrato.** Os nomes acima foram conferidos à mão contra o backend em
@@ -241,7 +242,7 @@ properties. A paleta completa, as classes utilitárias globais e a tipografia es
 
 ### Probabilidade Implícita (Favoritos)
 
-- Calculada a partir das odds de cada desfecho (fórmula em [`FavoritosPageComponent`](./documentacao.md#favoritospagecomponent))
+- Calculada a partir das odds de cada desfecho (fórmula em [`FavoritosPageComponent`](./funcionalidades.md#favoritospagecomponent))
 - Inclui overround da casa de apostas — total > 100% é esperado
 
 ### Cota da The Odds API: `null` não é zero
@@ -250,7 +251,7 @@ Campo anulável da API nunca vira `0` na tela. `saldoRestante`, `consumoMes` e o
 leitura vêm `null` enquanto nenhuma leitura de header ocorreu desde o boot da API, e a `/cota`
 mostra "sem leitura ainda" nesses casos: saldo baixo e saldo não lido são estados diferentes e
 pedem reações opostas. O detalhamento da tela, das grandezas derivadas e do gráfico está em
-[`CotaPageComponent`](./documentacao.md#cotapagecomponent).
+[`CotaPageComponent`](./funcionalidades.md#cotapagecomponent).
 
 ---
 
@@ -268,7 +269,7 @@ pedem reações opostas. O detalhamento da tela, das grandezas derivadas e do gr
 ## Docker — decisões e limites
 
 A relação de arquivos, variáveis de ambiente e comandos está em
-[Docker](./documentacao.md#17-docker). As decisões por trás dela:
+[`deploy.md`](./deploy.md#docker). As decisões por trás dela:
 
 - **Multi-stage build** — Node não existe na imagem final: ~25 MB de nginx alpine contra ~300 MB, e menos superfície de ataque
 - **Usuário não-root** — o container roda como `appuser`

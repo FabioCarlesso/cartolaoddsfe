@@ -1,219 +1,24 @@
-# Documentação Técnica — Cartola Odds Frontend
+# Funcionalidades
 
-> **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8 · Docker · nginx  
-> **Versão:** 1.3.0
+> Comportamento de cada tela e do que a sustenta: sessão, erros, modelos, serviços, componentes
+> compartilhados e as features. O mapa de rotas está em [`rotas.md`](rotas.md); as regras de
+> negócio e o porquê delas, em [`context.md`](context.md).
 
-> **Papel deste arquivo:** referência técnica completa — rotas, componentes, serviços, modelos,
-> build, Docker e testes. É o *o quê* e o *como*.
->
-> Para começar pelo começo (o que o projeto é e como rodá-lo), veja o
-> [`README.md`](../README.md). Para o *porquê* — decisões de arquitetura, convenções do código e
-> regras de negócio —, veja [`context.md`](./context.md).
-
----
-
-## Índice
-
-1. [Arquitetura](#1-arquitetura)
-2. [Configuração e Bootstrap](#2-configuração-e-bootstrap)
-3. [Roteamento](#3-roteamento)
-4. [Autenticação e Sessão](#4-autenticação-e-sessão)
-5. [Interceptor de Erros](#5-interceptor-de-erros)
-6. [Modelos de Dados](#6-modelos-de-dados)
-7. [Serviços HTTP](#7-serviços-http)
-8. [Componentes Compartilhados](#8-componentes-compartilhados)
-9. [Feature: Time](#9-feature-time)
-10. [Feature: Ranking](#10-feature-ranking)
-11. [Feature: Favoritos](#11-feature-favoritos)
-12. [Feature: Admin (Config + Cache + Cota)](#12-feature-admin-config--cache--cota)
-13. [Feature: Usuários](#13-feature-usuários)
-14. [Design System](#14-design-system)
-15. [Proxy de Desenvolvimento](#15-proxy-de-desenvolvimento)
-16. [Build e Deploy](#16-build-e-deploy)
-17. [Docker](#17-docker)
-18. [Testes](#18-testes)
-19. [Feature: Landing Pública](#19-feature-landing-pública)
+- [Autenticação e Sessão](#autenticação-e-sessão)
+- [Interceptor de Erros](#interceptor-de-erros)
+- [Modelos de Dados](#modelos-de-dados)
+- [Serviços HTTP](#serviços-http)
+- [Componentes Compartilhados](#componentes-compartilhados)
+- [Feature: Time](#feature-time)
+- [Feature: Ranking](#feature-ranking)
+- [Feature: Favoritos](#feature-favoritos)
+- [Feature: Admin (Config + Cache + Cota)](#feature-admin-config--cache--cota)
+- [Feature: Usuários](#feature-usuários)
+- [Feature: Landing Pública](#feature-landing-pública)
 
 ---
 
-## 1. Arquitetura
-
-O projeto segue o padrão **Feature-based com Standalone Components** do Angular 21. Não usa
-NgModules — cada componente declara seus próprios imports. São três camadas:
-
-| Camada | Papel |
-|---|---|
-| `core/` | Infraestrutura transversal: sessão, guardas e interceptors |
-| `shared/` | Modelos, utilitários e componentes reutilizáveis entre features |
-| `features/` | Domínios de negócio isolados, um por tela ou grupo de telas |
-
-O porquê de cada escolha estrutural está em
-[Decisões de stack](./context.md#decisões-de-stack).
-
-### Estrutura de arquivos
-
-```
-src/
-├── main.ts                          # Bootstrap standalone
-├── main.server.ts                   # Entry do prerender da landing (SSG no build)
-├── index.html
-├── robots.txt
-├── styles.scss                      # Design system: variáveis CSS globais
-└── app/
-    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error), hidratação
-    ├── app.config.server.ts         # Providers extras usados só no prerender
-    ├── app.routes.ts                # Rotas com lazy loading, guardas e título por rota
-    ├── app.component.*              # Shell: navbar + usuário logado + router-outlet
-    ├── core/
-    │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
-    │   ├── services/auth.service.ts # Sessão em signals, token no localStorage
-    │   ├── models/usuario.model.ts  # Usuario, requests e envelope de paginação Pagina<T>
-    │   ├── guards/auth.guard.ts     # Protege as rotas internas, guarda ?redirect=
-    │   ├── guards/role.guard.ts     # Restringe rotas por perfil (→ /403)
-    │   ├── guards/visitante.guard.ts # Libera a landing só para quem não tem sessão
-    │   └── interceptors/
-    │       ├── auth.interceptor.ts  # Authorization: Bearer + logout no 401
-    │       └── error.interceptor.ts # Tratamento global de erros HTTP → mensagens PT-BR
-    ├── shared/
-    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico, Comparacao)
-    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util, time-mapper.util, formacao.util
-    │   └── components/
-    │       ├── loading-spinner/     # Spinner animado (message, fullPage)
-    │       ├── alert-banner/        # Banners de aviso/erro/sucesso
-    │       ├── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
-    │       └── orcamento-input/     # Input reutilizável de orçamento (cartoletas) com validação
-    └── features/
-        ├── landing/                 # Página pública da raiz — nenhuma faixa chama /api
-        │   ├── _secao.scss          # Mixins das faixas (largura, sobrancelha, foco visível)
-        │   ├── components/          # landing-topo, -hero, -como-funciona, -funcionalidades,
-        │   │                        # -prints, -tecnologia, -rodape
-        │   └── pages/landing-page/  # Compõe as faixas na ordem da página
-        ├── auth/
-        │   └── pages/
-        │       ├── login-page/          # Formulário de login
-        │       ├── forbidden-page/      # Aviso de acesso restrito (/403)
-        │       └── alterar-senha-page/  # Troca da própria senha
-        ├── usuarios/
-        │   ├── services/usuario.service.ts   # CRUD de /api/usuarios
-        │   └── pages/
-        │       ├── usuarios-page/            # Listagem + ativar/desativar com confirmação
-        │       └── usuario-form-page/        # Criação e edição
-        ├── time/
-        │   ├── services/time.service.ts
-        │   ├── components/
-        │   │   ├── player-card/     # Card de atleta com score, dúvida, capitão
-        │   │   └── team-view/       # Campo visual 4-3-3
-        │   └── pages/time-page/
-        ├── ranking/
-        │   ├── services/ranking.service.ts
-        │   └── pages/ranking-page/  # Tabela com filtros
-        ├── favoritos/
-        │   ├── services/favoritos.service.ts
-        │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
-        ├── comparacao/
-        │   ├── services/comparacao.service.ts # GET /api/time/comparar
-        │   └── pages/comparacao-page/ # Chips de formação + cards ranqueados + detalhe colapsável
-        ├── historico/
-        │   ├── services/historico.service.ts # GET lista/detalhe, POST atualizar-pontuacao
-        │   └── pages/
-        │       ├── historico-page/           # Listagem de rodadas + gráfico de evolução
-        │       └── historico-detalhe-page/   # Tabelas titulares/reservas + gráfico de barras
-        └── admin/
-            ├── services/
-            │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
-            │   ├── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
-            │   └── cota.service.ts          # GET /api/odds/cota e /api/odds/cota/historico
-            └── pages/
-                ├── admin-page/              # Formulário de config + painel de cache
-                └── cota-page/               # Estado da cota, guardrail e gráfico do consumo
-```
-
----
-
-## 2. Configuração e Bootstrap
-
-### `src/main.ts`
-
-Ponto de entrada da aplicação. Usa `bootstrapApplication` (standalone):
-
-```typescript
-bootstrapApplication(AppComponent, appConfig)
-  .catch((err) => console.error(err));
-```
-
-### `src/app/app.config.ts`
-
-Registra os providers globais:
-
-```typescript
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-    provideAnimations()
-  ]
-};
-```
-
-| Provider | Função |
-|---|---|
-| `provideRouter` | Habilita roteamento com input binding |
-| `provideHttpClient` | HTTP com os interceptors funcionais, na ordem de execução |
-| `provideAnimations` | Suporte a animações Angular |
-
-A ordem do array de `withInterceptors` é a ordem de execução **da requisição**: o `authInterceptor`
-vem primeiro e, por isso, fica mais externo. Na volta o erro sobe na ordem inversa, então quem vê o
-erro primeiro é o `errorInterceptor` — que traduz a mensagem e devolve a **mesma instância** de
-`HttpErrorResponse`. Isso não é detalhe de estilo: o `authInterceptor` reconhece o `401` de sessão
-pelo `instanceof`, e uma cópia (`{ ...error }`) o desligaria em silêncio, deixando o usuário ver
-"Sessão expirada" sem nunca ser deslogado.
-
----
-
-## 3. Roteamento
-
-Arquivo: `src/app/app.routes.ts`
-
-Todas as rotas usam **lazy loading** via `loadComponent`:
-
-```typescript
-{
-  path: 'time',
-  loadComponent: () => import('./features/time/pages/time-page/time-page.component')
-    .then(m => m.TimePageComponent)
-}
-```
-
-| Path | Tela | Componente carregado | Guarda | Acesso |
-|---|---|---|---|---|
-| `/` | Landing pública com apresentação do projeto | `LandingPageComponent` | `visitanteGuard` | Público (com sessão, redireciona para `/time`) |
-| `/login` | Autenticação por e-mail e senha | `LoginPageComponent` | — | Público |
-| `/403` | Aviso de acesso restrito | `ForbiddenPageComponent` | — | Público |
-| `/time` | Time ideal com formação 4-3-3 | `TimePageComponent` | `authGuard` | Autenticado |
-| `/ranking` | Ranking de atletas com filtros | `RankingPageComponent` | `authGuard` | Autenticado |
-| `/favoritos` | Análise de odds e favoritos | `FavoritosPageComponent` | `authGuard` | Autenticado |
-| `/comparar` | Comparação do melhor time entre múltiplas formações, ranqueadas por score total | `ComparacaoPageComponent` | `authGuard` | Autenticado |
-| `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real | `HistoricoPageComponent` | `authGuard` | Autenticado |
-| `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) | `HistoricoDetalhePageComponent` | `authGuard` | Autenticado |
-| `/admin` | Configurações de negócio e gerenciamento de cache | `AdminPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
-| `/cota` | Estado da cota da The Odds API, guardrail e consumo do ciclo | `CotaPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
-| `/usuarios` | Listagem de usuários com ações de editar e ativar/desativar | `UsuariosPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
-| `/usuarios/novo` | Cadastro de usuário | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
-| `/usuarios/:id` | Edição de usuário | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
-| `/alterar-senha` | Troca da própria senha | `AlterarSenhaPageComponent` | `authGuard` | Autenticado |
-| `**` | Redireciona para `/` | — | — | — |
-
-Cada rota declara o próprio `title`. A raiz é pública, traz o próprio cabeçalho e rodapé e por
-isso declara `data: { layoutFluido: true }` — o `AppComponent` lê esse dado a cada
-`NavigationEnd` e sai da frente (ver [Shell](#shell)).
-
-Os itens "Config", "Cota" e "Usuários" só aparecem no menu para ADMIN. O motivo de a raiz usar o
-`visitanteGuard` e de a URL desconhecida cair em `/` — e não em `/time` — está em
-[Sessão e autorização](./context.md#sessão-e-autorização).
-
----
-
-## 4. Autenticação e Sessão
+## Autenticação e Sessão
 
 A API exige JWT em todos os endpoints, com uma única exceção pública: `POST /api/auth/login`.
 Os usuários são criados por um administrador — não existe auto-cadastro.
@@ -327,7 +132,7 @@ esconde também o nome do usuário e, até 480px, o texto da marca (ver
 
 ---
 
-## 5. Interceptor de Erros
+## Interceptor de Erros
 
 Arquivo: `src/app/core/interceptors/error.interceptor.ts`
 
@@ -366,7 +171,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
 ---
 
-## 6. Modelos de Dados
+## Modelos de Dados
 
 Todos em `src/app/shared/models/`.
 
@@ -449,7 +254,7 @@ interface JogoDescartado {
 
 ---
 
-## 7. Serviços HTTP
+## Serviços HTTP
 
 Todos usam `inject(HttpClient)` e são `providedIn: 'root'`. A URL base é sempre `/api` —
 proxiada para `localhost:8080/api` em dev — e toda chamada sai com
@@ -457,8 +262,8 @@ proxiada para `localhost:8080/api` em dev — e toda chamada sai com
 
 | Serviço | Endpoints |
 |---|---|
-| `AuthService` | `POST /api/auth/login`, `PATCH /api/usuarios/me/senha` (ver [seção 4](#4-autenticação-e-sessão)) |
-| `UsuarioService` | `GET/POST /api/usuarios`, `GET/PATCH/DELETE /api/usuarios/{id}` — restrito a ADMIN (ver [seção 13](#13-feature-usuários)) |
+| `AuthService` | `POST /api/auth/login`, `PATCH /api/usuarios/me/senha` (ver [Autenticação e Sessão](#autenticação-e-sessão)) |
+| `UsuarioService` | `GET/POST /api/usuarios`, `GET/PATCH/DELETE /api/usuarios/{id}` — restrito a ADMIN (ver [Feature: Usuários](#feature-usuários)) |
 | `TimeService` | `GET /api/time?orcamento=X` |
 | `ComparacaoService` | `GET /api/time/comparar?formacoes=…&orcamento=X` |
 | `RankingService` | `GET /api/ranking?posicao=X&limite=N&excluirDuvida=true` |
@@ -567,7 +372,7 @@ não é agregada (30 dias ≈ 500 leituras).
 
 ---
 
-## 8. Componentes Compartilhados
+## Componentes Compartilhados
 
 ### `LoadingSpinnerComponent`
 
@@ -617,7 +422,7 @@ score em cada `PlayerCardComponent`, cobrindo titulares e reservas).
 
 ---
 
-## 9. Feature: Time
+## Feature: Time
 
 ### Estrutura
 
@@ -696,7 +501,7 @@ Gerencia estado local: `loading`, `error`, `time`.
 
 ---
 
-## 10. Feature: Ranking
+## Feature: Ranking
 
 ### `RankingPageComponent`
 
@@ -719,7 +524,7 @@ A tabela exibe para cada atleta:
 
 ---
 
-## 11. Feature: Favoritos
+## Feature: Favoritos
 
 ### `FavoritosPageComponent`
 
@@ -747,7 +552,7 @@ probEmpate(jogo: JogoFavorito): number {
 
 ---
 
-## 12. Feature: Admin (Config + Cache + Cota)
+## Feature: Admin (Config + Cache + Cota)
 
 ### Estrutura
 
@@ -943,7 +748,7 @@ Os instantes são `LocalDateTime` sem offset, na hora local do servidor — mesm
 
 ---
 
-## 13. Feature: Usuários
+## Feature: Usuários
 
 Tela de administração dos acessos, restrita a `ADMIN`. Sem ela, criar um acesso exigiria
 `curl` ou o Swagger — que fica desabilitado em produção.
@@ -1009,308 +814,7 @@ informativa do que qualquer texto fixo do frontend.
 
 ---
 
-## 14. Design System  
-
-Definido em `src/styles.scss` via CSS custom properties:
-
-### Paleta
-
-```scss
-:root {
-  --bg-primary:    #0a0f1a;   // fundo da página
-  --bg-secondary:  #111827;   // inputs, dropdowns
-  --bg-card:       #1a2332;   // cards
-  --border:        #2d3748;   // bordas padrão
-  --green-primary: #22c55e;   // destaque principal
-  --green-dark:    #16a34a;   // hover de botões
-  --gold:          #f59e0b;   // capitão, alertas
-  --red:           #ef4444;   // erros
-  --blue:          #3b82f6;   // informação
-  --text-primary:  #f1f5f9;
-  --text-secondary:#94a3b8;
-  --text-muted:    #64748b;
-}
-```
-
-### Classes Utilitárias Globais
-
-| Classe | Uso |
-|---|---|
-| `.page-container` | `max-width: 1200px`, centralizado |
-| `.page-header` | Flex row com `justify-content: space-between` |
-| `.page-title` | Título H1 com fonte Space Grotesk |
-| `.section-title` | Título H2 de seção |
-| `.card` | Card com fundo, borda e sombra padrão |
-| `.btn.btn-primary` | Botão verde |
-| `.btn.btn-secondary` | Botão com borda |
-| `.form-control` | Input/select estilizado |
-| `.badge.*` | Badges coloridos (green, gold, red, blue, purple) |
-| `.empty-state` | Estado vazio centralizado |
-
-### Tipografia
-
-- **Corpo:** `Inter` (Google Fonts)
-- **Títulos e números:** `Space Grotesk` (Google Fonts)
-
----
-
-## 15. Proxy de Desenvolvimento
-
-Arquivo: `proxy.conf.json`
-
-```json
-{
-  "/api": {
-    "target": "http://localhost:8080",
-    "secure": false,
-    "changeOrigin": true
-  }
-}
-```
-
-Ativo automaticamente com `npm start` (`ng serve --proxy-config proxy.conf.json`).
-
----
-
-## 16. Build e Deploy
-
-Os comandos de desenvolvimento, build e teste estão em
-[Como Executar](../README.md#como-executar).
-
-### `angular.json` — Builder
-
-Usa o builder esbuild (`@angular-devkit/build-angular:application`), padrão do Angular 21:
-
-- **Output:** `dist/cartolaoddsfe/`
-- **Entry:** `src/main.ts` (navegador) e `src/main.server.ts` (prerender)
-- **Styles:** `src/styles.scss`
-- **Polyfills:** `zone.js`
-- **Output hashing:** habilitado em produção
-
-### Prerender da landing (SSG)
-
-A rota `/` é pré-renderizada no build: o HTML da landing sai pronto do `npm run build`, sem
-esperar o bootstrap do Angular no navegador. Não há servidor Node em produção — `ssr` fica
-desligado e o deploy continua sendo o nginx servindo arquivos estáticos.
-
-```jsonc
-// angular.json → architect.build.options
-"server": "src/main.server.ts",
-"prerender": { "discoverRoutes": false, "routesFile": "prerender-routes.txt" },
-"ssr": false
-```
-
-O `prerender-routes.txt` lista só a raiz, e `discoverRoutes: false` é deliberado — o porquê
-está em [Landing pública, prerender e layout do shell](./context.md#landing-pública-prerender-e-layout-do-shell).
-
-O build gera **dois** HTML na pasta `browser/`:
-
-| Arquivo | Conteúdo | Quem serve |
-|---|---|---|
-| `index.html` | Landing pré-renderizada, com as marcas de hidratação | `location = /` no nginx |
-| `index.csr.html` | Shell com `<app-root></app-root>` vazio | Fallback de SPA das demais rotas |
-
-A separação evita um efeito colateral do prerender, descrito em
-[Landing pública, prerender e layout do shell](./context.md#landing-pública-prerender-e-layout-do-shell).
-
-O `provideClientHydration()` no `app.config.ts` faz o Angular reaproveitar o HTML pré-renderizado
-em vez de descartá-lo e desenhar tudo de novo.
-
-### Variáveis de Ambiente
-
-Não há `environment.ts` — a URL do backend é definida diretamente nos serviços como `/api` e resolvida pelo proxy em dev ou pelo servidor web em produção.
-
-Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api/*` → `http://backend:8080/api/*`.
-
----
-
-## 17. Docker
-
-### Arquivos
-
-| Arquivo | Descrição |
-|---|---|
-| `Dockerfile` | Build multi-stage: Node 20 Alpine (build) + nginx 1.27 Alpine (runtime) |
-| `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` |
-| `docker-compose.yml` | Orquestração com healthcheck e resource limits |
-| `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
-| `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs e docs do contexto de build |
-
-### Dockerfile — Multi-stage Build
-
-```
-Stage 1 — build (node:20-alpine)
-  └── npm ci --legacy-peer-deps
-  └── npm run build
-        └── gera dist/cartolaoddsfe/browser/
-
-Stage 2 — runtime (nginx:1.27-alpine)
-  └── COPY nginx.conf.template
-  └── COPY --from=build dist/cartolaoddsfe/browser → /usr/share/nginx/html
-  └── USER appuser (não-root)
-  └── EXPOSE 80
-  └── CMD: envsubst + nginx
-```
-
-O porquê de cada escolha — multi-stage, usuário não-root, `envsubst` em runtime,
-`host.docker.internal` — está em
-[Docker — decisões e limites](./context.md#docker--decisões-e-limites).
-
-### nginx.conf.template
-
-Configurações habilitadas:
-
-| Recurso | Detalhe |
-|---|---|
-| SPA routing | `try_files $uri $uri/ /index.html` — suporta client-side routing |
-| Proxy `/api/` | Proxia para `${BACKEND_URL}/api/` — sem CORS em produção |
-| Cache de assets | `Cache-Control: public, immutable` por 1 ano para JS/CSS/fontes |
-| Gzip | Compressão habilitada para `text/*`, `application/json`, `application/javascript` |
-| Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` — definidos em `nginx-security-headers.conf` e incluídos em cada `location` do SPA. Em `/api/` valem os headers do Spring Security; o nginx só preenche como fallback quando gera a resposta sozinho (502/504). `X-XSS-Protection` não é enviado: o auditor XSS legado foi removido dos navegadores e o backend define `0` deliberadamente |
-
-### Variáveis de Ambiente
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
-| `APP_PORT` | `4200` | Porta exposta no host |
-
-### Comandos
-
-O início rápido (copiar o `.env` e subir o container) está em
-[Docker no README](../README.md#docker). Os demais comandos de operação:
-
-```bash
-# Rebuild após mudança de código
-docker compose up -d --build
-
-# Logs
-docker compose logs -f frontend
-
-# Status e healthcheck
-docker compose ps
-
-# Parar
-docker compose down
-
-# Build manual
-docker build -t cartola-odds-frontend:1.0.0 .
-
-# Executar sem Compose (Linux: --add-host para resolver host.docker.internal)
-docker run -p 4200:80 \
-  --add-host=host.docker.internal:host-gateway \
-  -e BACKEND_URL=http://host.docker.internal:8080 \
-  cartola-odds-frontend:1.0.0
-```
-
-### Resource Limits (docker-compose.yml)
-
-```yaml
-deploy:
-  resources:
-    limits:
-      memory: 128m
-      cpus: "0.5"
-    reservations:
-      memory: 64m
-      cpus: "0.1"
-```
-
-O dimensionamento está justificado em
-[Docker — decisões e limites](./context.md#docker--decisões-e-limites).
-
----
-
-## 18. Testes
-
-### Stack de Testes
-
-| Ferramenta | Versão | Uso |
-|---|---|---|
-| Karma | via `@angular-devkit/build-angular` | Test runner |
-| Jasmine | ~5.1 | Framework de asserções e spies |
-| `karma-coverage` | ~2.2 | Relatório de cobertura de código |
-| `ChromeHeadless` | — | Browser de execução (CI-friendly) |
-
-Configuração em `karma.conf.js`, referenciado no `angular.json` via `"karmaConfig": "karma.conf.js"`.
-
-### Estratégia por camada
-
-**Serviços** — usam `provideHttpClient()` + `provideHttpClientTesting()` + `HttpTestingController` para interceptar e verificar chamadas HTTP:
-
-```typescript
-const req = httpMock.expectOne('/api/time');
-expect(req.request.method).toBe('GET');
-req.flush(mockData);
-```
-
-**Componentes compartilhados e de UI** — importam o componente standalone diretamente em `TestBed.configureTestingModule({ imports: [Component] })`, verificam DOM via `fixture.nativeElement` e testam inputs/outputs.
-
-**Componentes de página** — usam `jasmine.createSpyObj` para mockar serviços, controlam retornos com `of(data)` e `throwError(...)` do RxJS:
-
-```typescript
-mockTimeService = jasmine.createSpyObj('TimeService', ['getTime']);
-mockTimeService.getTime.and.returnValue(of(mockTime));
-```
-
-**Interceptors** — usam `HttpClient` real com o interceptor registrado via `withInterceptors([...])`: o `errorInterceptor` é verificado pelo campo `userMessage` nos erros, e o `authInterceptor` pelo header `Authorization` da requisição e pelo efeito colateral no `AuthService` e no `Router`.
-
-**Guardas** — executadas com `TestBed.runInInjectionContext`, comparando o `UrlTree` devolvido com a rota esperada. O `roleGuard` é chamado já parametrizado: `roleGuard(['ADMIN'])(route, state)`.
-
-### Cobertura dos Testes
-
-| Arquivo de teste | Camada | Cenários cobertos |
-|---|---|---|
-| `app.routes.spec.ts` | Rotas | Título declarado em toda rota navegável, título público na raiz, `**` para a landing |
-| `app.component.spec.ts` | Shell | Criação, navbar, links por perfil (Config, Cota e Usuários só para ADMIN), usuário logado, botão Sair, navegação escondida sem sessão, layout fluido da landing |
-| `auth.service.spec.ts` | Core | Login, claims do token, restauração da sessão, token expirado/sem `perfil`/malformado, logout, sessão expirada, storage indisponível, aviso de token descartado, troca de senha |
-| `auth.interceptor.spec.ts` | Core | Header presente/ausente, login sem header, `401` deslogando, `403` mantendo a sessão, demais status, e a cadeia real com o `errorInterceptor` |
-| `auth.guard.spec.ts` | Core | Sessão válida, sem sessão (com e sem `redirect`), token expirado |
-| `role.guard.spec.ts` | Core | ADMIN permitido, USER para `/403`, múltiplos perfis aceitos, visitante e sessão expirada para `/login` |
-| `visitante.guard.spec.ts` | Core | Visitante liberado na landing, sessão válida redirecionada a `/time`, token expirado tratado como visitante |
-| `error.interceptor.spec.ts` | Core | Status 0, 400 (com e sem mensagem), 401 (login e sessão), 403, 409, 422, 429, 502, 500, resposta de sucesso |
-| `landing-page.component.spec.ts` | Page | Faixas na ordem, um único `h1`, seções nomeadas, zero requisição HTTP, sem promessa de auto-cadastro |
-| `landing-*.component.spec.ts` | Componentes | Âncora do "Como funciona", CTAs para `/login`, cards de funcionalidade e de decisão, prints com `lazy`/`alt`/dimensões, aviso de desvínculo no rodapé |
-| `login-page.component.spec.ts` | Page | Submissão válida, credencial inválida, estado de carregamento, sessão expirada, senha alterada, `redirect` interno e externo, parâmetros chegando com a tela montada |
-| `forbidden-page.component.spec.ts` | Page | Mensagem de acesso restrito e volta para `/time` |
-| `alterar-senha-page.component.spec.ts` | Page | Senhas divergentes, senha curta, sucesso encerrando a sessão, `422` de senha atual incorreta |
-| `usuario.service.spec.ts` | Service | Listagem paginada e ordenada, busca por id, criação, `PATCH` parcial, desativar, reativar, `409` de e-mail e de último ADMIN |
-| `usuarios-page.component.spec.ts` | Page | Listagem, colunas, situação, ausência de senha, confirmação antes de desativar, cancelamento, `409` do último ADMIN, reativação, erro de carga, estado vazio |
-| `usuario-form-page.component.spec.ts` | Page | Validação de e-mail e senha mínima, criação, edição sem campo de senha, `PATCH` só do que mudou, `409` de e-mail e das regras de ADMIN, erro de carga |
-| `loading-spinner.component.spec.ts` | Shared | Spinner DOM, message vazio/preenchido, classe full-page |
-| `alert-banner.component.spec.ts` | Shared | Tipos (warning/error/success/info), ícones, classes CSS, message |
-| `consistencia.util.spec.ts` | Util | Faixas de desvio, badge neutro, tooltip |
-| `consistencia-badge.component.spec.ts` | Shared | Cores por faixa, badge neutro, toggle do tooltip |
-| `orcamento-input.component.spec.ts` | Shared | Validação (>0), limpar, two-way binding, submit no Enter |
-| `score-info.util.spec.ts` | Util | `criterioScore` da API tem prioridade, fallback por posição (GOL/ATA/demais), descrição ausente, `scorePercent` (0/50/100%, teto acima de 12, fracionários) |
-| `performance.util.spec.ts` | Util | Delta indisponível sem pontuação real, classificação verde/amarelo/vermelho por faixa, `deltaPercent`, score sugerido zero sem divisão por zero |
-| `time-mapper.util.spec.ts` | Util | `mapAtleta` (clube/sinônimos/dúvida/substituto), `mapTimeResponse` (flatten, defaults) |
-| `formacao.util.spec.ts` | Util | Formações válidas, limites 2–5, conversão formação → config, validação de composição |
-| `time.service.spec.ts` | Service | GET /api/time, param orçamento, mapeamento agrupado→flat, `nomeClube`→`clube`, `status`→`emDuvida`, substituto recursivo, campos de custo/estratégia, capitão nulo, `avisoMercado`, erros HTTP |
-| `ranking.service.spec.ts` | Service | GET /api/ranking, params `posicao`/`limite`/`excluirDuvida`, limite padrão, propagação de erro |
-| `favoritos.service.spec.ts` | Service | GET /api/favoritos, `oddLimite` opcional, propagação de erro |
-| `comparacao.service.spec.ts` | Service | GET /api/time/comparar, param `formacoes`/orçamento, ordenação, indisponível, `melhorFormacao` |
-| `historico.service.spec.ts` | Service | GET lista, GET por rodada, POST `atualizar-pontuacao`, propagação de erro |
-| `configuracao.service.spec.ts` | Service | GET /api/config, PATCH com body, POST /api/config/reset, erros HTTP |
-| `cache.service.spec.ts` | Service | DELETE /api/cache (todos), DELETE /api/cache/{nome}, erro 400 de nome inválido |
-| `cota.service.spec.ts` | Service | GET de estado e histórico, param `dias` opcional, campos anuláveis preservados, `reinicioDeCota`, `403` |
-| `player-card.component.spec.ts` | Component | Nome, clube, posição, `scorePercent`, critério do score, capitão, dúvida, substituto, luxo, valorização, badge de consistência |
-| `team-view.component.spec.ts` | Component | Filtros por posição, ordem LAT-ZAG-ZAG-LAT, capitão, reserva de luxo, sem TEC, sem LAT |
-| `time-page.component.spec.ts` | Page | Load no init, sucesso, erro, métricas (`titularesCount`, `duvidaCount`, `totalPreco`, `mediaScore`), `avisoMercado`, orçamento (validação/barra/estratégia/`avisoOrcamento`), null state |
-| `ranking-page.component.spec.ts` | Page | Load, filtros, lista de posições, `scorePercent`, critério por posição, ordem da API, badge de consistência, `avisoMercado`, erro |
-| `favoritos-page.component.spec.ts` | Page | `probFavorito`, `probEmpate` (com/sem `oddEmpate`), reset, cards no DOM, erro |
-| `comparacao-page.component.spec.ts` | Page | Chips (2–5), comparar, expandir único, medalhas, modal "Usar formação" + PATCH/redirect, persistência |
-| `historico-page.component.spec.ts` | Page | Load no init, ordem da mais recente para a mais antiga, estado vazio com CTA, erro, classificação do delta, teto da barra, card por rodada, pendente com botão atualizar, gráfico de evolução só com 3+ rodadas reais, atualização inline (reservas fora do total, erro inline) |
-| `historico-detalhe-page.component.spec.ts` | Page | Carga pelo param da rota, split titulares/reservas, `scoreSugeridoTotal`, capitão dobrado no total real, disponibilidade da pontuação, marcadores (capitão/luxo/dúvida), gráfico de barra dupla, delta por atleta, erro de carga, atualização e erro inline |
-| `admin-page.component.spec.ts` | Page | Load config, sync form, salvar, resetar, invalidar todos, invalidar cache, `somasPesos`, `pesosValidos`, validação de `pesoDesvio`, erros |
-| `cota-page.component.spec.ts` | Page | Saldo/consumo/margem, "sem leitura ainda" no lugar de zero, guardrail armado com `proximaSondagem`, histórico falhando sem derrubar a tela, segmento por ciclo e marca de renovação, escala ancorada em zero |
-
-Os comandos de execução (incluindo cobertura e watch mode) estão em
-[Testes](../README.md#testes).
-
----
-
-## 19. Feature: Landing Pública
+## Feature: Landing Pública
 
 Arquivos: `src/app/features/landing/`
 
@@ -1352,10 +856,10 @@ teste, com o porquê em
   WCAG 1.4.3 nos tamanhos usados.
 - `title`, `meta description`, Open Graph e Twitter Card ficam estáticos no `index.html`, e o
   título da landing é o que fica na aba da página pública. Cada rota interna declara o próprio
-  `title` (ver [Roteamento](#3-roteamento)), senão esse texto de divulgação ficaria na aba de
+  `title` (ver [`rotas.md`](rotas.md)), senão esse texto de divulgação ficaria na aba de
   todas as telas do sistema.
 - `robots.txt` (`src/robots.txt`) libera a raiz e bloqueia `/api/`.
-- A landing é pré-renderizada no build (ver [Build e Deploy](#16-build-e-deploy)), então o
+- A landing é pré-renderizada no build (ver [`deploy.md`](deploy.md)), então o
   crawler recebe o conteúdo no HTML — e o visitante vê a página antes de o Angular inicializar.
 
 ### Capturas das telas
@@ -1363,7 +867,3 @@ teste, com o porquê em
 As imagens de `src/assets/landing/` são das telas reais, capturadas contra uma API de
 demonstração com dados fictícios. O procedimento e a regra de manutenção estão em
 [`prints-da-landing.md`](./prints-da-landing.md).
-
----
-
-*Documentação atualizada em 2026 — Projeto Cartola Odds Frontend.*

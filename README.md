@@ -4,8 +4,9 @@
 
 > **Papel deste arquivo:** porta de entrada do repositório — o que o projeto é, como rodar, como
 > buildar e para onde ir atrás do resto. A referência técnica completa (rotas, componentes,
-> serviços, contratos) está em [`docs/documentacao.md`](./docs/documentacao.md); as decisões de
-> arquitetura e as convenções do código, em [`docs/context.md`](./docs/context.md).
+> serviços, contratos) está em [`docs/`](./docs/README.md) — o índice diz qual arquivo é dono de
+> cada assunto; as decisões de arquitetura e as convenções do código, em
+> [`docs/context.md`](./docs/context.md).
 
 ---
 
@@ -26,7 +27,7 @@ Interface web que consome a [Cartola Odds API](https://github.com/FabioCarlesso)
 O acesso é autenticado: a API exige um JWT em todos os endpoints, e o frontend guarda a sessão, envia o token em cada chamada e reage à expiração. Os usuários são criados por um administrador — não há auto-cadastro. Quem chega sem sessão encontra a landing; quem já tem sessão e abre `/` vai direto para o time da rodada.
 
 A lista completa de telas, com rota, guarda e nível de acesso, está em
-[Roteamento](./docs/documentacao.md#3-roteamento).
+[`docs/rotas.md`](./docs/rotas.md).
 
 ---
 
@@ -84,7 +85,7 @@ do Angular. As demais rotas usam o `index.csr.html`, o mesmo shell vazio de semp
 `Dockerfile` já faz essa separação; ao servir o `dist` em outro servidor, aponte `/` para
 `index.html` e o fallback de SPA para `index.csr.html` — o porquê está em
 [Landing pública, prerender e layout do shell](./docs/context.md#landing-pública-prerender-e-layout-do-shell),
-e os detalhes do build em [Build e Deploy](./docs/documentacao.md#16-build-e-deploy).
+e os detalhes do build em [`docs/deploy.md`](./docs/deploy.md).
 
 ### Testes
 
@@ -101,7 +102,7 @@ npm test -- --watch
 ```
 
 O projeto usa **Karma + Jasmine**, com cobertura em todas as camadas. A estratégia de teste por
-camada e o mapa de cenários por arquivo de spec estão em [Testes](./docs/documentacao.md#18-testes).
+camada e o mapa de cenários por arquivo de spec estão em [`docs/desenvolvimento.md`](./docs/desenvolvimento.md).
 
 ---
 
@@ -123,19 +124,27 @@ que funciona sem ajuste quando o backend roda em `localhost:8080` — tanto no D
 quanto no Linux, porque o `docker-compose.yml` já mapeia `host.docker.internal` para o host.
 
 A lista de arquivos, as variáveis de ambiente, os comandos de operação e os limites de recurso
-estão em [Docker](./docs/documentacao.md#17-docker); as decisões por trás dessa configuração,
+estão em [`docs/deploy.md`](./docs/deploy.md#docker); as decisões por trás dessa configuração,
 em [Docker — decisões e limites](./docs/context.md#docker--decisões-e-limites).
 
 ---
 
 ## Documentação
 
-| Arquivo | Papel |
+| Arquivo | O que contém |
 |---|---|
 | `README.md` (este) | Porta de entrada: o que é, como rodar, como buildar, para onde ir depois |
-| [`docs/documentacao.md`](./docs/documentacao.md) | Referência técnica completa: rotas, componentes, serviços, modelos, build, Docker, testes |
+| [`docs/arquitetura.md`](./docs/arquitetura.md) | Camadas, estrutura de pastas, bootstrap e proxy de desenvolvimento |
+| [`docs/funcionalidades.md`](./docs/funcionalidades.md) | Comportamento de cada tela: sessão, erros, modelos, serviços e features |
+| [`docs/rotas.md`](./docs/rotas.md) | Mapa de rotas com componente, guarda e nível de acesso |
+| [`docs/design-system.md`](./docs/design-system.md) | Paleta, classes utilitárias e tipografia |
+| [`docs/desenvolvimento.md`](./docs/desenvolvimento.md) | Ferramental e estratégia de testes, com a cobertura por spec |
+| [`docs/deploy.md`](./docs/deploy.md) | Build de produção, prerender, Docker e nginx |
 | [`docs/context.md`](./docs/context.md) | Decisões de arquitetura, convenções do código e as regras de negócio refletidas na UI |
 | [`docs/prints-da-landing.md`](./docs/prints-da-landing.md) | Como refazer as capturas de tela usadas na landing |
+
+Antes de documentar uma mudança, veja em [`docs/README.md`](./docs/README.md) qual arquivo é o
+dono do assunto.
 
 > **Regra do repositório:** PR que muda a aparência das telas de time, ranking, comparação ou histórico precisa refazer o print correspondente da landing. A página é pública e é a primeira coisa que alguém vê do projeto.
 
