@@ -16,83 +16,43 @@ NgModules — cada componente declara seus próprios imports. São três camadas
 O porquê de cada escolha estrutural está em
 [Decisões de stack](./context.md#decisões-de-stack).
 
-## Estrutura de arquivos
+## Estrutura de pastas
 
 ```
-src/
-├── main.ts                          # Bootstrap standalone
-├── main.server.ts                   # Entry do prerender da landing (SSG no build)
-├── index.html
-├── robots.txt
-├── styles.scss                      # Design system: variáveis CSS globais
-└── app/
-    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error), hidratação
-    ├── app.config.server.ts         # Providers extras usados só no prerender
-    ├── app.routes.ts                # Rotas com lazy loading, guardas e título por rota
-    ├── app.component.*              # Shell: navbar + usuário logado + router-outlet
-    ├── core/
-    │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
-    │   ├── services/auth.service.ts # Sessão em signals, token no localStorage
-    │   ├── models/usuario.model.ts  # Usuario, requests e envelope de paginação Pagina<T>
-    │   ├── guards/auth.guard.ts     # Protege as rotas internas, guarda ?redirect=
-    │   ├── guards/role.guard.ts     # Restringe rotas por perfil (→ /403)
-    │   ├── guards/visitante.guard.ts # Libera a landing só para quem não tem sessão
-    │   └── interceptors/
-    │       ├── auth.interceptor.ts  # Authorization: Bearer + logout no 401
-    │       └── error.interceptor.ts # Tratamento global de erros HTTP → mensagens PT-BR
-    ├── shared/
-    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico, Comparacao)
-    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util, time-mapper.util, formacao.util
-    │   └── components/
-    │       ├── loading-spinner/     # Spinner animado (message, fullPage)
-    │       ├── alert-banner/        # Banners de aviso/erro/sucesso
-    │       ├── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
-    │       └── orcamento-input/     # Input reutilizável de orçamento (cartoletas) com validação
-    └── features/
-        ├── landing/                 # Página pública da raiz — nenhuma faixa chama /api
-        │   ├── _secao.scss          # Mixins das faixas (largura, sobrancelha, foco visível)
-        │   ├── components/          # landing-topo, -hero, -como-funciona, -funcionalidades,
-        │   │                        # -prints, -tecnologia, -rodape
-        │   └── pages/landing-page/  # Compõe as faixas na ordem da página
-        ├── auth/
-        │   └── pages/
-        │       ├── login-page/          # Formulário de login
-        │       ├── forbidden-page/      # Aviso de acesso restrito (/403)
-        │       └── alterar-senha-page/  # Troca da própria senha
-        ├── usuarios/
-        │   ├── services/usuario.service.ts   # CRUD de /api/usuarios
-        │   └── pages/
-        │       ├── usuarios-page/            # Listagem + ativar/desativar com confirmação
-        │       └── usuario-form-page/        # Criação e edição
-        ├── time/
-        │   ├── services/time.service.ts
-        │   ├── components/
-        │   │   ├── player-card/     # Card de atleta com score, dúvida, capitão
-        │   │   └── team-view/       # Campo visual 4-3-3
-        │   └── pages/time-page/
-        ├── ranking/
-        │   ├── services/ranking.service.ts
-        │   └── pages/ranking-page/  # Tabela com filtros
-        ├── favoritos/
-        │   ├── services/favoritos.service.ts
-        │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
-        ├── comparacao/
-        │   ├── services/comparacao.service.ts # GET /api/time/comparar
-        │   └── pages/comparacao-page/ # Chips de formação + cards ranqueados + detalhe colapsável
-        ├── historico/
-        │   ├── services/historico.service.ts # GET lista/detalhe, POST atualizar-pontuacao
-        │   └── pages/
-        │       ├── historico-page/           # Listagem de rodadas + gráfico de evolução
-        │       └── historico-detalhe-page/   # Tabelas titulares/reservas + gráfico de barras
-        └── admin/
-            ├── services/
-            │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
-            │   ├── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
-            │   └── cota.service.ts          # GET /api/odds/cota e /api/odds/cota/historico
-            └── pages/
-                ├── admin-page/              # Formulário de config + painel de cache
-                └── cota-page/               # Estado da cota, guardrail e gráfico do consumo
+.
+├── src/
+│   ├── main.ts                # Bootstrap standalone do navegador
+│   ├── main.server.ts         # Entry do prerender da landing (SSG no build)
+│   ├── index.html             # Shell e metadados de divulgação (title, Open Graph, Twitter Card)
+│   ├── robots.txt             # Libera a raiz, bloqueia /api/
+│   ├── styles.scss            # Design system: variáveis CSS globais
+│   ├── assets/landing/        # Capturas das telas reais usadas na landing
+│   └── app/
+│       ├── app.config.ts      # Providers globais (o .server.ts só vale no prerender)
+│       ├── app.routes.ts      # Rotas, guardas e título por rota
+│       ├── app.component.*    # Shell: navbar, usuário logado e router-outlet
+│       ├── core/              # Sessão e acesso: models/, services/, guards/, interceptors/
+│       ├── shared/            # Reuso entre features
+│       │   ├── models/        # Interfaces dos contratos da API
+│       │   ├── utils/         # Funções puras, testadas fora do componente que as consome
+│       │   ├── pipes/         # Pipes de formatação
+│       │   └── components/    # Componentes de UI reutilizáveis
+│       └── features/          # Um domínio por pasta: landing, auth, usuarios, time,
+│                              # ranking, favoritos, comparacao, historico, admin
+├── prerender-routes.txt       # O que é pré-renderizado no build — só a raiz
+├── proxy.conf.json            # /api → localhost:8080 em desenvolvimento
+├── nginx.conf.template        # Config do nginx servido pela imagem Docker
+└── scripts/prints/            # Apoio à captura das telas da landing
 ```
+
+Cada feature repete o mesmo desenho interno: `services/` para as chamadas à API, `components/`
+para as peças da tela e `pages/` para as telas em si. Componentes de página orquestram os
+serviços e nunca chamam `HttpClient` diretamente.
+
+Lógica que não depende do DOM — classificação de consistência, delta de performance, critério do
+score por posição, mapeamento do time, composição de formação — vive em `shared/utils/` para ser testada isoladamente. O
+comportamento de cada tela está em [`funcionalidades.md`](funcionalidades.md); a lista de
+arquivos, o próprio repositório responde.
 
 ---
 

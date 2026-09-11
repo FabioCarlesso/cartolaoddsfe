@@ -102,7 +102,7 @@ npm test -- --watch
 ```
 
 O projeto usa **Karma + Jasmine**, com cobertura em todas as camadas. A estratégia de teste por
-camada e o mapa de cenários por arquivo de spec estão em [`docs/desenvolvimento.md`](./docs/desenvolvimento.md).
+camada está em [`docs/desenvolvimento.md`](./docs/desenvolvimento.md).
 
 ---
 

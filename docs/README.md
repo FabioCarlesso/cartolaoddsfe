@@ -42,6 +42,12 @@ esta consolidação veio resolver.
 
 ## O que não documentar à mão
 
-Backlog não mora aqui. Melhoria prevista, ideia e pendência viram issue — foi o que a #51 fez
+Listas que o repositório já responde não são mantidas aqui: árvore de pastas arquivo a arquivo e
+mapa de `.spec.ts` nascem desatualizados no primeiro componente novo e ninguém percebe. O
+`arquitetura.md` descreve as pastas e o desenho que se repete em cada feature, não os arquivos
+dentro delas; `find src -name '*.spec.ts'` e `npm test -- --code-coverage` respondem sobre os
+testes. Documente o que o código não diz sozinho — o comportamento da tela e o porquê da decisão.
+
+Backlog também não mora aqui. Melhoria prevista, ideia e pendência viram issue — foi o que a #51 fez
 com a seção "Próximas Melhorias Previstas" que vivia no `context.md`, onde itens já entregues
 seguiam marcados como pendentes.

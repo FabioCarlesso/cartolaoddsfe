@@ -12,6 +12,8 @@
 - [Feature: Time](#feature-time)
 - [Feature: Ranking](#feature-ranking)
 - [Feature: Favoritos](#feature-favoritos)
+- [Feature: Comparação de Formações](#feature-comparação-de-formações)
+- [Feature: Histórico](#feature-histórico)
 - [Feature: Admin (Config + Cache + Cota)](#feature-admin-config--cache--cota)
 - [Feature: Usuários](#feature-usuários)
 - [Feature: Landing Pública](#feature-landing-pública)
@@ -288,6 +290,9 @@ O backend retorna `titulares` e `reservas` agrupados por posição (`{ ATA: [], 
 - `status` (string `"⚠️ Dúvida"`) → `emDuvida` (boolean)
 - `substitutoProvavel` mapeado recursivamente
 
+O mapeamento vive em `shared/utils/time-mapper.util.ts` (`mapAtleta` e `mapTimeResponse`), e não
+no serviço, porque a comparação de formações reusa exatamente a mesma transformação.
+
 ### `ComparacaoService`
 
 ```typescript
@@ -420,20 +425,31 @@ mouse (desktop) e ao tocar/clicar (mobile), fechando ao clicar fora ou perder o 
 Usado nas telas de **Ranking** (inline na célula de score) e **Time** (ao lado do
 score em cada `PlayerCardComponent`, cobrindo titulares e reservas).
 
+### `OrcamentoInputComponent`
+
+Seletor: `app-orcamento-input`
+
+Campo de orçamento em cartoletas, reusado pelas telas de Time e de Comparação.
+
+| Input | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `orcamento` | `number \| null` | `null` | Valor atual; emparelhado com `orcamentoChange` para two-way binding |
+| `label` | `string` | `'Orçamento máximo (cartoletas)'` | Rótulo do campo |
+| `placeholder` | `string` | `'Ex: 120.0'` | Texto de exemplo |
+| `inputId` | `string` | gerado | Id único por instância, para o `label[for]` não colidir quando há dois na mesma página |
+
+| Output | Quando dispara |
+|---|---|
+| `orcamentoChange` | A cada digitação, já convertido para `number` ou `null` |
+| `limpar` | Botão de limpar, que também zera o valor |
+| `gerar` | Enter no campo, atalho para a ação principal da tela — só dispara com valor válido |
+
+Valor `<= 0` é inválido (`invalido`): a tela exibe o erro inline e o Enter não aciona nada.
+Campo vazio não é erro — significa "sem teto de orçamento".
+
 ---
 
 ## Feature: Time
-
-### Estrutura
-
-```
-features/time/
-├── services/time.service.ts
-├── components/
-│   ├── player-card/player-card.component.ts
-│   └── team-view/team-view.component.ts
-└── pages/time-page/time-page.component.ts
-```
 
 ### `PlayerCardComponent`
 
@@ -499,6 +515,13 @@ Gerencia estado local: `loading`, `error`, `time`.
 - `totalPreco` — soma de `preco` dos titulares
 - `mediaScore` — média de `score` dos titulares
 
+**Orçamento.** O [`OrcamentoInputComponent`](#orcamentoinputcomponent) alimenta o parâmetro
+`orcamento` do `GET /api/time`, e o valor persiste em `sessionStorage` (`time.orcamento`) para
+sobreviver a uma navegação. Com orçamento informado, a tela mostra a barra de saldo
+(`custoTotal / orcamentoInformado` e `saldoRestante`), destacada quando o custo estoura o teto, e
+o badge da `estrategia` devolvida pela API. O `avisoOrcamento` da resposta — quando o teto
+apertou a escalação — aparece como banner de aviso, sem bloquear o time.
+
 ---
 
 ## Feature: Ranking
@@ -552,22 +575,65 @@ probEmpate(jogo: JogoFavorito): number {
 
 ---
 
+## Feature: Comparação de Formações
+
+Monta o melhor time em 2 a 5 formações ao mesmo tempo e ranqueia os resultados por `scoreTotal`,
+com o detalhe de cada uma reusando o `app-team-view` da tela de Time.
+
+A chamada e o mapeamento estão em [`ComparacaoService`](#comparacaoservice); as regras da tela —
+seleção por chips, persistência em `sessionStorage`, medalhas, formação indisponível, o modal de
+"Usar esta formação" e a salvaguarda de composição — estão em
+[Comparação de Formações](./context.md#comparação-de-formações-comparar), porque são decisões de
+negócio e não de componente.
+
+---
+
+## Feature: Histórico
+
+Duas telas sobre as escalações já geradas: `/historico`, com uma rodada por card, e
+`/historico/:rodadaId`, com a escalação inteira.
+
+### `HistoricoPageComponent`
+
+Lista as rodadas da mais recente para a mais antiga, cada card com o score sugerido, a pontuação
+real (quando já calculada) e o delta entre os dois. Rodada sem pontuação real exibe estado
+pendente com o botão **Atualizar**, que chama `POST /api/historico/{rodadaId}/atualizar-pontuacao`
+e atualiza **apenas aquele card**, sem recarregar a lista; a falha também fica contida no card.
+
+O gráfico de evolução só aparece com três ou mais rodadas já pontuadas — com menos que isso, uma
+linha de dois pontos sugeriria tendência onde há só duas medidas. É SVG inline, no mesmo padrão
+do gráfico da `/cota`.
+
+### `HistoricoDetalhePageComponent`
+
+Separa titulares e reservas pelo `reservaLuxo`, marca capitão, reserva de luxo e dúvida, e soma
+os totais: o `scoreSugeridoTotal` vem dos titulares, e no `pontuacaoRealTotal` **o capitão conta
+em dobro**, como no Cartola FC real. Com pontuação real disponível, desenha o gráfico de barra
+dupla (sugerido × real) por atleta.
+
+### Classificação do delta (`shared/utils/performance.util.ts`)
+
+`getPerformanceDelta(scoreSugerido, pontuacaoReal)` centraliza a regra, para listagem e detalhe
+classificarem igual:
+
+| Proporção `pontuacaoReal / scoreSugerido` | Nível |
+|---|---|
+| `>= 0.9` | 🟢 verde |
+| `0.7 – 0.9` | 🟡 amarelo |
+| `< 0.7` | 🔴 vermelho |
+| `pontuacaoReal` nula | ⚪ indisponível — a rodada ainda não foi pontuada |
+
+Score sugerido zero não divide por zero: sem base de comparação, pontuação real positiva é verde
+e o resto é vermelho. As grandezas derivadas (`delta`, `deltaPercent`, `percentAtingido`) são
+`null` quando a pontuação real não existe — pela mesma razão que a `/cota` não mostra `0` sem
+leitura.
+
+---
+
 ## Feature: Admin (Config + Cache + Cota)
 
-### Estrutura
-
-```
-features/admin/
-├── services/
-│   ├── configuracao.service.ts    # GET/PATCH /api/config, POST /api/config/reset
-│   ├── cache.service.ts           # DELETE /api/cache, DELETE /api/cache/{nome}
-│   └── cota.service.ts            # GET /api/odds/cota, GET /api/odds/cota/historico
-└── pages/
-    ├── admin-page/
-    │   └── admin-page.component.ts  # Tela unificada de configuração e cache
-    └── cota-page/
-        └── cota-page.component.ts   # Estado da cota, guardrail e consumo do ciclo
-```
+Duas telas: a `/admin`, que reúne configuração e cache, e a `/cota`, com o estado do guardrail e
+o consumo do ciclo.
 
 ### `AdminPageComponent`
 
@@ -753,16 +819,8 @@ Os instantes são `LocalDateTime` sem offset, na hora local do servidor — mesm
 Tela de administração dos acessos, restrita a `ADMIN`. Sem ela, criar um acesso exigiria
 `curl` ou o Swagger — que fica desabilitado em produção.
 
-### Estrutura
-
-```
-core/models/usuario.model.ts              ← Usuario, UsuarioRequest, UsuarioUpdateRequest, Pagina<T>
-features/usuarios/
-├── services/usuario.service.ts           ← /api/usuarios
-└── pages/
-    ├── usuarios-page/                    ← listagem + ativar/desativar
-    └── usuario-form-page/                ← criação e edição
-```
+Os modelos (`Usuario`, `UsuarioRequest`, `UsuarioUpdateRequest` e o envelope `Pagina<T>`) ficam
+em `core/models/usuario.model.ts`, porque a sessão também os consome.
 
 ### `UsuarioService`
 
@@ -821,23 +879,20 @@ Arquivos: `src/app/features/landing/`
 Página da raiz, dirigida a duas audiências ao mesmo tempo: o cartoleiro, que precisa entender em
 segundos o que o sistema faz por ele, e quem avalia o projeto tecnicamente.
 
-### Estrutura
+A página é uma sequência de faixas, nesta ordem:
 
-```
-features/landing/
-├── _secao.scss                      # Mixins: faixa, faixa-interna, sobrancelha, título, foco
-├── components/
-│   ├── landing-topo/                # Barra pública: marca, "Como funciona", "Entrar"
-│   ├── landing-hero/                # Proposta de valor, CTAs (login e GitHub)
-│   ├── landing-como-funciona/       # Pipeline em 4 passos (#como-funciona)
-│   ├── landing-funcionalidades/     # Cards das capacidades reais do sistema
-│   ├── landing-prints/              # Galeria das telas (#telas)
-│   ├── landing-tecnologia/          # Stack, decisões de arquitetura e os dois repositórios
-│   └── landing-rodape/              # Autoria, licença e aviso de desvínculo
-└── pages/landing-page/              # Compõe as faixas na ordem da página
-```
+| Faixa | Conteúdo |
+|---|---|
+| Topo | Barra pública: marca, "Como funciona", "Entrar" |
+| Hero | Proposta de valor e CTAs (login e GitHub) |
+| Como funciona | Pipeline em 4 passos (âncora `#como-funciona`) |
+| Funcionalidades | Cards das capacidades reais do sistema |
+| Prints | Galeria das telas (âncora `#telas`) |
+| Tecnologia | Stack, decisões de arquitetura e os dois repositórios |
+| Rodapé | Autoria, licença e aviso de desvínculo |
 
-Cada faixa é um componente próprio: o conteúdo da página muda com frequência e por motivos
+Cada faixa é um componente próprio, e os mixins comuns (largura, sobrancelha, título, foco
+visível) ficam em `_secao.scss`. O conteúdo da página muda com frequência e por motivos
 diferentes (produto, stack, capturas), e separar mantém cada mudança em um arquivo só.
 
 ### Independência da API
@@ -858,6 +913,9 @@ teste, com o porquê em
   título da landing é o que fica na aba da página pública. Cada rota interna declara o próprio
   `title` (ver [`rotas.md`](rotas.md)), senão esse texto de divulgação ficaria na aba de
   todas as telas do sistema.
+- As capturas trazem `alt` descritivo do que a tela mostra, `loading="lazy"` para ficarem fora do
+  carregamento inicial e `width`/`height` reais, que reservam o espaço e evitam o salto de layout
+  enquanto carregam.
 - `robots.txt` (`src/robots.txt`) libera a raiz e bloqueia `/api/`.
 - A landing é pré-renderizada no build (ver [`deploy.md`](deploy.md)), então o
   crawler recebe o conteúdo no HTML — e o visitante vê a página antes de o Angular inicializar.
