@@ -3,6 +3,13 @@
 > **Stack:** Angular 21 · TypeScript 5.9 · SCSS · RxJS 7.8 · Docker · nginx  
 > **Versão:** 1.3.0
 
+> **Papel deste arquivo:** referência técnica completa — rotas, componentes, serviços, modelos,
+> build, Docker e testes. É o *o quê* e o *como*.
+>
+> Para começar pelo começo (o que o projeto é e como rodá-lo), veja o
+> [`README.md`](../README.md). Para o *porquê* — decisões de arquitetura, convenções do código e
+> regras de negócio —, veja [`context.md`](./context.md).
+
 ---
 
 ## Índice
@@ -31,29 +38,95 @@
 
 ## 1. Arquitetura
 
-O projeto segue o padrão **Feature-based com Standalone Components** do Angular 21. Não usa NgModules — cada componente declara seus próprios imports.
+O projeto segue o padrão **Feature-based com Standalone Components** do Angular 21. Não usa
+NgModules — cada componente declara seus próprios imports. São três camadas:
 
-```
-app/
-├── core/           # Infraestrutura transversal (auth, guards, interceptors)
-├── shared/         # Modelos e componentes reutilizáveis
-└── features/       # Domínios de negócio isolados
-    ├── auth/       # Login, acesso restrito e troca de senha
-    ├── time/
-    ├── ranking/
-    ├── favoritos/
-    └── admin/      # Configurações e gerenciamento de cache
-```
-
-### Decisões de Arquitetura
-
-| Decisão | Justificativa |
+| Camada | Papel |
 |---|---|
-| Standalone components | Padrão Angular 17 — sem boilerplate de NgModule |
-| Lazy loading por rota | Reduz bundle inicial; cada feature carrega sob demanda |
-| `inject()` em vez de construtor | Código mais conciso, compatível com signals futuros |
-| Inline styles em componentes menores | Encapsulamento total; evita conflitos de CSS global |
-| `async pipe` e `subscribe` explícito | Preferência pelo `subscribe` com `OnInit` para controle de estado local |
+| `core/` | Infraestrutura transversal: sessão, guardas e interceptors |
+| `shared/` | Modelos, utilitários e componentes reutilizáveis entre features |
+| `features/` | Domínios de negócio isolados, um por tela ou grupo de telas |
+
+O porquê de cada escolha estrutural está em
+[Decisões de stack](./context.md#decisões-de-stack).
+
+### Estrutura de arquivos
+
+```
+src/
+├── main.ts                          # Bootstrap standalone
+├── main.server.ts                   # Entry do prerender da landing (SSG no build)
+├── index.html
+├── robots.txt
+├── styles.scss                      # Design system: variáveis CSS globais
+└── app/
+    ├── app.config.ts                # Providers: router, http, interceptors (auth antes de error), hidratação
+    ├── app.config.server.ts         # Providers extras usados só no prerender
+    ├── app.routes.ts                # Rotas com lazy loading, guardas e título por rota
+    ├── app.component.*              # Shell: navbar + usuário logado + router-outlet
+    ├── core/
+    │   ├── models/auth.model.ts     # LoginRequest/Response, Perfil, SessaoUsuario
+    │   ├── services/auth.service.ts # Sessão em signals, token no localStorage
+    │   ├── models/usuario.model.ts  # Usuario, requests e envelope de paginação Pagina<T>
+    │   ├── guards/auth.guard.ts     # Protege as rotas internas, guarda ?redirect=
+    │   ├── guards/role.guard.ts     # Restringe rotas por perfil (→ /403)
+    │   ├── guards/visitante.guard.ts # Libera a landing só para quem não tem sessão
+    │   └── interceptors/
+    │       ├── auth.interceptor.ts  # Authorization: Bearer + logout no 401
+    │       └── error.interceptor.ts # Tratamento global de erros HTTP → mensagens PT-BR
+    ├── shared/
+    │   ├── models/                  # Interfaces TypeScript (Atleta, Time, Ranking, Favoritos, Historico, Comparacao)
+    │   ├── utils/                   # consistencia.util (badge), performance.util (delta), score-info.util, time-mapper.util, formacao.util
+    │   └── components/
+    │       ├── loading-spinner/     # Spinner animado (message, fullPage)
+    │       ├── alert-banner/        # Banners de aviso/erro/sucesso
+    │       ├── consistencia-badge/  # Badge de consistência (🟢🟡🔴⚪) com tooltip
+    │       └── orcamento-input/     # Input reutilizável de orçamento (cartoletas) com validação
+    └── features/
+        ├── landing/                 # Página pública da raiz — nenhuma faixa chama /api
+        │   ├── _secao.scss          # Mixins das faixas (largura, sobrancelha, foco visível)
+        │   ├── components/          # landing-topo, -hero, -como-funciona, -funcionalidades,
+        │   │                        # -prints, -tecnologia, -rodape
+        │   └── pages/landing-page/  # Compõe as faixas na ordem da página
+        ├── auth/
+        │   └── pages/
+        │       ├── login-page/          # Formulário de login
+        │       ├── forbidden-page/      # Aviso de acesso restrito (/403)
+        │       └── alterar-senha-page/  # Troca da própria senha
+        ├── usuarios/
+        │   ├── services/usuario.service.ts   # CRUD de /api/usuarios
+        │   └── pages/
+        │       ├── usuarios-page/            # Listagem + ativar/desativar com confirmação
+        │       └── usuario-form-page/        # Criação e edição
+        ├── time/
+        │   ├── services/time.service.ts
+        │   ├── components/
+        │   │   ├── player-card/     # Card de atleta com score, dúvida, capitão
+        │   │   └── team-view/       # Campo visual 4-3-3
+        │   └── pages/time-page/
+        ├── ranking/
+        │   ├── services/ranking.service.ts
+        │   └── pages/ranking-page/  # Tabela com filtros
+        ├── favoritos/
+        │   ├── services/favoritos.service.ts
+        │   └── pages/favoritos-page/ # Cards de partidas + probabilidades
+        ├── comparacao/
+        │   ├── services/comparacao.service.ts # GET /api/time/comparar
+        │   └── pages/comparacao-page/ # Chips de formação + cards ranqueados + detalhe colapsável
+        ├── historico/
+        │   ├── services/historico.service.ts # GET lista/detalhe, POST atualizar-pontuacao
+        │   └── pages/
+        │       ├── historico-page/           # Listagem de rodadas + gráfico de evolução
+        │       └── historico-detalhe-page/   # Tabelas titulares/reservas + gráfico de barras
+        └── admin/
+            ├── services/
+            │   ├── configuracao.service.ts  # GET/PATCH /api/config, POST /api/config/reset
+            │   ├── cache.service.ts         # DELETE /api/cache e /api/cache/{nome}
+            │   └── cota.service.ts          # GET /api/odds/cota e /api/odds/cota/historico
+            └── pages/
+                ├── admin-page/              # Formulário de config + painel de cache
+                └── cota-page/               # Estado da cota, guardrail e gráfico do consumo
+```
 
 ---
 
@@ -111,30 +184,32 @@ Todas as rotas usam **lazy loading** via `loadComponent`:
 }
 ```
 
-| Path | Componente carregado | Guarda |
-|---|---|---|
-| `/` | `LandingPageComponent` | `visitanteGuard` |
-| `/login` | `LoginPageComponent` | — |
-| `/403` | `ForbiddenPageComponent` | — |
-| `/time` | `TimePageComponent` | `authGuard` |
-| `/ranking` | `RankingPageComponent` | `authGuard` |
-| `/favoritos` | `FavoritosPageComponent` | `authGuard` |
-| `/comparar` | `ComparacaoPageComponent` | `authGuard` |
-| `/historico` | `HistoricoPageComponent` | `authGuard` |
-| `/historico/:rodadaId` | `HistoricoDetalhePageComponent` | `authGuard` |
-| `/admin` | `AdminPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
-| `/cota` | `CotaPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
-| `/usuarios` | `UsuariosPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
-| `/usuarios/novo` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
-| `/usuarios/:id` | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` |
-| `/alterar-senha` | `AlterarSenhaPageComponent` | `authGuard` |
-| `**` | Redireciona para `/` | — |
+| Path | Tela | Componente carregado | Guarda | Acesso |
+|---|---|---|---|---|
+| `/` | Landing pública com apresentação do projeto | `LandingPageComponent` | `visitanteGuard` | Público (com sessão, redireciona para `/time`) |
+| `/login` | Autenticação por e-mail e senha | `LoginPageComponent` | — | Público |
+| `/403` | Aviso de acesso restrito | `ForbiddenPageComponent` | — | Público |
+| `/time` | Time ideal com formação 4-3-3 | `TimePageComponent` | `authGuard` | Autenticado |
+| `/ranking` | Ranking de atletas com filtros | `RankingPageComponent` | `authGuard` | Autenticado |
+| `/favoritos` | Análise de odds e favoritos | `FavoritosPageComponent` | `authGuard` | Autenticado |
+| `/comparar` | Comparação do melhor time entre múltiplas formações, ranqueadas por score total | `ComparacaoPageComponent` | `authGuard` | Autenticado |
+| `/historico` | Histórico de escalações por rodada com comparativo score sugerido × pontuação real | `HistoricoPageComponent` | `authGuard` | Autenticado |
+| `/historico/:rodadaId` | Detalhe da escalação de uma rodada (titulares, reservas e gráficos) | `HistoricoDetalhePageComponent` | `authGuard` | Autenticado |
+| `/admin` | Configurações de negócio e gerenciamento de cache | `AdminPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
+| `/cota` | Estado da cota da The Odds API, guardrail e consumo do ciclo | `CotaPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
+| `/usuarios` | Listagem de usuários com ações de editar e ativar/desativar | `UsuariosPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
+| `/usuarios/novo` | Cadastro de usuário | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
+| `/usuarios/:id` | Edição de usuário | `UsuarioFormPageComponent` | `authGuard` + `roleGuard(['ADMIN'])` | **ADMIN** |
+| `/alterar-senha` | Troca da própria senha | `AlterarSenhaPageComponent` | `authGuard` | Autenticado |
+| `**` | Redireciona para `/` | — | — | — |
 
-A raiz é pública e traz o próprio cabeçalho e rodapé, então declara `data: { layoutFluido: true }`
-— o `AppComponent` lê esse dado a cada `NavigationEnd` e sai da frente (ver [Shell](#shell)).
+Cada rota declara o próprio `title`. A raiz é pública, traz o próprio cabeçalho e rodapé e por
+isso declara `data: { layoutFluido: true }` — o `AppComponent` lê esse dado a cada
+`NavigationEnd` e sai da frente (ver [Shell](#shell)).
 
-Uma URL desconhecida cai em `/`, e não em `/time`: com sessão, o `visitanteGuard` encaminha ao
-time; sem sessão, o visitante para na landing em vez de numa tela de login sem contexto.
+Os itens "Config", "Cota" e "Usuários" só aparecem no menu para ADMIN. O motivo de a raiz usar o
+`visitanteGuard` e de a URL desconhecida cair em `/` — e não em `/time` — está em
+[Sessão e autorização](./context.md#sessão-e-autorização).
 
 ---
 
@@ -180,9 +255,8 @@ apenas no boot — porque o token vence com a aba aberta.
 **Persistência.** Token e nome ficam em `localStorage` (`cartolaodds.accessToken` e
 `cartolaodds.nome`). Todo acesso é protegido: em navegador com storage de site bloqueado a
 leitura lança, e nesse caso a sessão passa a viver em memória — o usuário entra e navega
-normalmente, apenas perde o login ao recarregar a página. A alternativa mais segura seria
-cookie `HttpOnly` + CSRF, descartada aqui pelo custo frente ao perfil de uso (aplicação
-pessoal, sem dados de terceiros).
+normalmente, apenas perde o login ao recarregar a página. O porquê dessa escolha de
+armazenamento está em [Sessão e autorização](./context.md#sessão-e-autorização).
 
 ### `core/interceptors/auth.interceptor.ts`
 
@@ -213,15 +287,14 @@ posterior ao login.
 (com os mesmos parâmetros montados pelo `authGuard`), e com sessão de perfil errado manda
 para `/403`.
 
-Isto é defesa de **experiência**, não de segurança: quem editar o `localStorage` chega à
-tela, mas a API recusa a operação. A autorização real é sempre a do `SecurityConfig` no
-backend.
+Isto é defesa de **experiência**, não de segurança — a autorização real é sempre a do
+`SecurityConfig` no backend (ver
+[Sessão e autorização](./context.md#sessão-e-autorização)).
 
 ### `core/guards/visitante.guard.ts`
 
 Inverso do `authGuard`: libera a rota apenas para quem **não** tem sessão. Quem já está logado e
-abre `/` — o bookmark mais comum de quem usa o app todo dia — recebe um `UrlTree` para `/time`,
-em vez da página de apresentação.
+abre `/` recebe um `UrlTree` para `/time`, em vez da página de apresentação.
 
 ```typescript
 export const visitanteGuard: CanActivateFn = () =>
@@ -239,8 +312,8 @@ export const visitanteGuard: CanActivateFn = () =>
 ### Shell
 
 O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
-(atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config" e "Usuários" só aparecem
-para o perfil `ADMIN`.
+(atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config", "Cota" e "Usuários" só
+aparecem para o perfil `ADMIN`.
 
 Rotas marcadas com `data: { layoutFluido: true }` — hoje só a landing — trazem o próprio
 cabeçalho e o próprio rodapé, e o shell esconde os seus. O `AppComponent` acompanha o dado da
@@ -249,8 +322,8 @@ em vez de comparar a URL: uma nova rota fluida só precisa declarar o `data`.
 
 Como ADMIN o cabeçalho carrega sete links mais o nome e o **Sair**, e por isso degrada em
 etapas: até 1120px aperta o espaçamento, até 1000px deixa os links só com o ícone, até 640px
-esconde também o nome do usuário e, até 480px, o texto da marca. Sem essas etapas a página
-inteira ganhava scroll horizontal e o **Sair** saía da tela.
+esconde também o nome do usuário e, até 480px, o texto da marca (ver
+[Design System](./context.md#design-system)).
 
 ---
 
@@ -319,7 +392,7 @@ interface Atleta {
 }
 ```
 
-Os campos `desvioPadrao` e `rodadasConsideradas` são retornados pela API (`/api/time` e `/api/ranking`) com esses nomes oficiais e alimentam o **indicador de consistência** (ver `ConsistenciaBadgeComponent` na seção 7). Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico) o desvio não é calculável e o frontend exibe um badge neutro ⚪.
+Os campos `desvioPadrao` e `rodadasConsideradas` são retornados pela API (`/api/time` e `/api/ranking`) com esses nomes oficiais e alimentam o **indicador de consistência** (ver [`ConsistenciaBadgeComponent`](#consistenciabadgecomponent)). Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico) o desvio não é calculável e o frontend exibe um badge neutro ⚪ — ver [Indicador de Consistência](./context.md#indicador-de-consistência-desvio-padrão).
 
 ### `TimeResponse`
 
@@ -378,13 +451,28 @@ interface JogoDescartado {
 
 ## 7. Serviços HTTP
 
-Todos usam `inject(HttpClient)` e são `providedIn: 'root'`.
+Todos usam `inject(HttpClient)` e são `providedIn: 'root'`. A URL base é sempre `/api` —
+proxiada para `localhost:8080/api` em dev — e toda chamada sai com
+`Authorization: Bearer <token>`, exceto o próprio login.
+
+| Serviço | Endpoints |
+|---|---|
+| `AuthService` | `POST /api/auth/login`, `PATCH /api/usuarios/me/senha` (ver [seção 4](#4-autenticação-e-sessão)) |
+| `UsuarioService` | `GET/POST /api/usuarios`, `GET/PATCH/DELETE /api/usuarios/{id}` — restrito a ADMIN (ver [seção 13](#13-feature-usuários)) |
+| `TimeService` | `GET /api/time?orcamento=X` |
+| `ComparacaoService` | `GET /api/time/comparar?formacoes=…&orcamento=X` |
+| `RankingService` | `GET /api/ranking?posicao=X&limite=N&excluirDuvida=true` |
+| `FavoritosService` | `GET /api/favoritos?oddLimite=X` |
+| `HistoricoService` | `GET /api/historico`, `GET /api/historico/{rodadaId}`, `POST /api/historico/{rodadaId}/atualizar-pontuacao` |
+| `ConfiguracaoService` | `GET /api/config`, `PATCH /api/config`, `POST /api/config/reset` |
+| `CacheService` | `DELETE /api/cache`, `DELETE /api/cache/{nome}` |
+| `CotaService` | `GET /api/odds/cota`, `GET /api/odds/cota/historico?dias=N` — restrito a ADMIN |
 
 ### `TimeService`
 
 ```typescript
-getTime(): Observable<TimeResponse>
-// GET /api/time
+getTime(orcamento?: number | null): Observable<TimeResponse>
+// GET /api/time?orcamento=X  — sem o parâmetro, o time é o de maior score sem teto de custo
 ```
 
 O backend retorna `titulares` e `reservas` agrupados por posição (`{ ATA: [], MEI: [], ... }`). O service aplica mapeamento interno antes de expor o `Observable<TimeResponse>`:
@@ -395,12 +483,27 @@ O backend retorna `titulares` e `reservas` agrupados por posição (`{ ATA: [], 
 - `status` (string `"⚠️ Dúvida"`) → `emDuvida` (boolean)
 - `substitutoProvavel` mapeado recursivamente
 
+### `ComparacaoService`
+
+```typescript
+comparar(formacoes: string[], orcamento?: number | null): Observable<CompararResponse>
+// GET /api/time/comparar?formacoes=4-3-3&formacoes=3-4-3&orcamento=120
+```
+
+Um parâmetro `formacoes` por formação (de 2 a 5) e `orcamento` opcional. A resposta traz
+`melhorFormacao` e `resultados` ordenados por `scoreTotal`, e passa pelo mesmo mapeamento do
+`TimeService` antes de chegar ao componente. As regras da tela — seleção, salvaguarda de
+composição, formação indisponível — estão em
+[Comparação de Formações](./context.md#comparação-de-formações-comparar).
+
 ### `RankingService`
 
 ```typescript
-getRanking(posicao?: string, limite = 25): Observable<RankingResponse>
-// GET /api/ranking?posicao=X&limite=N
+getRanking(posicao?: string, limite = 25, excluirDuvida = false): Observable<RankingResponse>
+// GET /api/ranking?posicao=X&limite=N&excluirDuvida=true
 ```
+
+`excluirDuvida` só é enviado quando verdadeiro; `posicao` vazia lista todas as posições.
 
 ### `FavoritosService`
 
@@ -410,6 +513,19 @@ getFavoritos(oddLimite?: number): Observable<FavoritosResponse>
 ```
 
 Quando `oddLimite` é `undefined`, o parâmetro não é enviado e o backend usa o valor padrão configurado em `application.properties`.
+
+### `HistoricoService`
+
+```typescript
+getHistorico(): Observable<HistoricoResponse>
+// GET /api/historico
+
+getRodada(rodadaId: number): Observable<EscalacaoRodadaResponse>
+// GET /api/historico/{rodadaId}
+
+atualizarPontuacao(rodadaId: number): Observable<EscalacaoRodadaResponse>
+// POST /api/historico/{rodadaId}/atualizar-pontuacao
+```
 
 ### `ConfiguracaoService`
 
@@ -446,7 +562,8 @@ getHistorico(dias?: number): Observable<CotaHistoricoResponse>
 // GET /api/odds/cota/historico?dias=N  — sem o parâmetro, a API aplica o padrão de 30 dias
 ```
 
-Os dois endpoints são restritos a `ADMIN`.
+Os dois endpoints são restritos a `ADMIN`. A janela do histórico vai de 1 a 92 dias e a série
+não é agregada (30 dias ≈ 500 leituras).
 
 ---
 
@@ -529,7 +646,8 @@ Seletor: `app-player-card`
 - Barra de score normalizada para máximo de 12 pontos
 - Indicação do critério do score retornado pela API; quando ausente, fallback por posição
 - Valorização positiva em verde, negativa em vermelho
-- Atletas em dúvida: borda âmbar + gradiente de fundo + bloco com substituto provável
+- Marcadores de dúvida, capitão e reserva de luxo, com as regras em
+  [Regras de Negócio Refletidas no Frontend](./context.md#regras-de-negócio-refletidas-no-frontend)
 
 **Score percent:**
 ```typescript
@@ -956,13 +1074,8 @@ Ativo automaticamente com `npm start` (`ng serve --proxy-config proxy.conf.json`
 
 ## 16. Build e Deploy
 
-### Comandos
-
-```bash
-npm start          # Dev server com proxy (porta 4200)
-npm run build      # Build de produção em dist/cartolaoddsfe/
-npm test           # Testes com Karma/Jasmine
-```
+Os comandos de desenvolvimento, build e teste estão em
+[Como Executar](../README.md#como-executar).
 
 ### `angular.json` — Builder
 
@@ -987,9 +1100,8 @@ desligado e o deploy continua sendo o nginx servindo arquivos estáticos.
 "ssr": false
 ```
 
-`discoverRoutes: false` é deliberado: descobrir as rotas automaticamente faria o build tentar
-pré-renderizar as telas internas, que exigem sessão e chamam a API — sem backend no build, elas
-congelariam uma tela de erro no HTML. O `prerender-routes.txt` lista só a raiz.
+O `prerender-routes.txt` lista só a raiz, e `discoverRoutes: false` é deliberado — o porquê
+está em [Landing pública, prerender e layout do shell](./context.md#landing-pública-prerender-e-layout-do-shell).
 
 O build gera **dois** HTML na pasta `browser/`:
 
@@ -998,8 +1110,8 @@ O build gera **dois** HTML na pasta `browser/`:
 | `index.html` | Landing pré-renderizada, com as marcas de hidratação | `location = /` no nginx |
 | `index.csr.html` | Shell com `<app-root></app-root>` vazio | Fallback de SPA das demais rotas |
 
-A separação evita o efeito colateral do prerender: se o fallback devolvesse o `index.html`, quem
-abrisse `/time` direto veria a landing por um instante antes de a aplicação assumir a tela.
+A separação evita um efeito colateral do prerender, descrito em
+[Landing pública, prerender e layout do shell](./context.md#landing-pública-prerender-e-layout-do-shell).
 
 O `provideClientHydration()` no `app.config.ts` faz o Angular reaproveitar o HTML pré-renderizado
 em vez de descartá-lo e desenhar tudo de novo.
@@ -1022,7 +1134,7 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 | `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` |
 | `docker-compose.yml` | Orquestração com healthcheck e resource limits |
 | `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
-| `.dockerignore` | Exclui `node_modules/`, `dist/`, specs e docs do contexto |
+| `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs e docs do contexto de build |
 
 ### Dockerfile — Multi-stage Build
 
@@ -1040,11 +1152,9 @@ Stage 2 — runtime (nginx:1.27-alpine)
   └── CMD: envsubst + nginx
 ```
 
-**Decisões de design:**
-- **Alpine** — imagem base mínima (~25 MB na runtime vs ~300 MB com Node)
-- **Usuário não-root** — `appuser` criado no estágio runtime, boa prática para produção
-- **`envsubst`** — `BACKEND_URL` substituído no template em tempo de inicialização do container, sem rebuild de imagem
-- **Multi-stage** — Node.js não existe na imagem final, reduz superfície de ataque
+O porquê de cada escolha — multi-stage, usuário não-root, `envsubst` em runtime,
+`host.docker.internal` — está em
+[Docker — decisões e limites](./context.md#docker--decisões-e-limites).
 
 ### nginx.conf.template
 
@@ -1067,12 +1177,10 @@ Configurações habilitadas:
 
 ### Comandos
 
-```bash
-# Início rápido
-cp .env.example .env            # 1. copiar template
-# editar .env se necessário      # 2. ajustar BACKEND_URL
-docker compose up -d            # 3. subir container
+O início rápido (copiar o `.env` e subir o container) está em
+[Docker no README](../README.md#docker). Os demais comandos de operação:
 
+```bash
 # Rebuild após mudança de código
 docker compose up -d --build
 
@@ -1088,9 +1196,10 @@ docker compose down
 # Build manual
 docker build -t cartola-odds-frontend:1.0.0 .
 
-# Executar sem Compose
+# Executar sem Compose (Linux: --add-host para resolver host.docker.internal)
 docker run -p 4200:80 \
-  -e BACKEND_URL=http://localhost:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -e BACKEND_URL=http://host.docker.internal:8080 \
   cartola-odds-frontend:1.0.0
 ```
 
@@ -1107,7 +1216,8 @@ deploy:
       cpus: "0.1"
 ```
 
-O container nginx consome muito menos recursos que o backend Java — 128 MB é suficiente para tráfego de desenvolvimento e uso moderado em produção.
+O dimensionamento está justificado em
+[Docker — decisões e limites](./context.md#docker--decisões-e-limites).
 
 ---
 
@@ -1149,53 +1259,54 @@ mockTimeService.getTime.and.returnValue(of(mockTime));
 
 ### Cobertura dos Testes
 
-| Arquivo de Teste | Cenários cobertos |
-|---|---|
-| `app.component.spec.ts` | Criação, navbar, links por perfil (Config e Usuários só para ADMIN), usuário logado, botão Sair, navegação escondida sem sessão |
-| `auth.service.spec.ts` | Login, claims do token, restauração da sessão, token expirado/sem `perfil`/malformado, logout, sessão expirada, storage indisponível, troca de senha |
-| `auth.interceptor.spec.ts` | Header presente/ausente, login sem header, `401` deslogando, `403` mantendo a sessão, demais status |
-| `auth.guard.spec.ts` | Sessão válida, sem sessão (com e sem `redirect`), token expirado |
-| `role.guard.spec.ts` | ADMIN permitido, USER para `/403`, múltiplos perfis aceitos, visitante e sessão expirada para `/login` |
-| `usuario.service.spec.ts` | Listagem paginada e ordenada, busca por id, criação, `PATCH` parcial, desativar, reativar, `409` de e-mail e de último ADMIN |
-| `usuarios-page.component.spec.ts` | Listagem, colunas, ausência de senha, confirmação antes de desativar, cancelamento, `409` do último ADMIN, reativação, erro de carga, estado vazio |
-| `usuario-form-page.component.spec.ts` | Validação de e-mail e senha mínima, criação, edição sem campo de senha, `PATCH` só do que mudou, `409` de e-mail e das regras de ADMIN, erro de carga |
-| `login-page.component.spec.ts` | Submissão válida, credencial inválida, estado de carregamento, aviso de sessão expirada, `redirect` interno e externo |
-| `forbidden-page.component.spec.ts` | Mensagem de acesso restrito e volta para `/time` |
-| `alterar-senha-page.component.spec.ts` | Senhas divergentes, senha curta, sucesso encerrando a sessão, `422` de senha atual incorreta |
-| `error.interceptor.spec.ts` | Status 0, 400 (com e sem mensagem), 422, 502, 500, resposta de sucesso |
-| `loading-spinner.component.spec.ts` | Spinner DOM, message vazio/preenchido, classe full-page |
-| `alert-banner.component.spec.ts` | Tipos (warning/error/success/info), ícones, classes CSS, message |
-| `time.service.spec.ts` | GET /api/time, mapeamento agrupado→flat, nomeClube→clube, status→emDuvida, substituto recursivo, avisoMercado, erros |
-| `ranking.service.spec.ts` | GET com limite padrão, com/sem posicao, propagação de erro |
-| `favoritos.service.spec.ts` | GET sem oddLimite, com oddLimite, propagação de erro |
-| `player-card.component.spec.ts` | Nome, clube, posição, dúvida, capitão, luxo, substituto, scorePercent (0/50/100%), valorizacao |
-| `team-view.component.spec.ts` | Filtros por posição, ordem LAT-ZAG-ZAG-LAT, capitão, reserva de luxo, sem TEC, sem LAT |
-| `time-page.component.spec.ts` | Load no init, sucesso, erro, fallback, métricas (titularesCount, duvidaCount, totalPreco, mediaScore), null state |
-| `ranking-page.component.spec.ts` | Load, filtros, scorePercent, erro, lista de posições, avisoMercado |
-| `favoritos-page.component.spec.ts` | probFavorito, probEmpate (com/sem oddEmpate), reset, DOM cards, erro |
-| `configuracao.service.spec.ts` | GET /api/config, PATCH com body, POST /api/config/reset, erros HTTP |
-| `cache.service.spec.ts` | DELETE /api/cache (todos), DELETE /api/cache/{nome}, erro 400 nome inválido |
-| `admin-page.component.spec.ts` | Load config, sync form, salvar, resetar, invalidarTodos, invalidarCache, somasPesos, pesosValidos, erros |
-| `cota.service.spec.ts` | GET /api/odds/cota, GET /historico com e sem `dias`, campos anuláveis preservados, `reinicioDeCota`, `403` |
-| `cota-page.component.spec.ts` | Saldo/consumo/margem, "sem leitura ainda" no lugar de zero, guardrail armado com `proximaSondagem`, histórico falhando sem derrubar a tela, segmento por ciclo e marca de renovação, escala ancorada em zero |
+| Arquivo de teste | Camada | Cenários cobertos |
+|---|---|---|
+| `app.routes.spec.ts` | Rotas | Título declarado em toda rota navegável, título público na raiz, `**` para a landing |
+| `app.component.spec.ts` | Shell | Criação, navbar, links por perfil (Config, Cota e Usuários só para ADMIN), usuário logado, botão Sair, navegação escondida sem sessão, layout fluido da landing |
+| `auth.service.spec.ts` | Core | Login, claims do token, restauração da sessão, token expirado/sem `perfil`/malformado, logout, sessão expirada, storage indisponível, aviso de token descartado, troca de senha |
+| `auth.interceptor.spec.ts` | Core | Header presente/ausente, login sem header, `401` deslogando, `403` mantendo a sessão, demais status, e a cadeia real com o `errorInterceptor` |
+| `auth.guard.spec.ts` | Core | Sessão válida, sem sessão (com e sem `redirect`), token expirado |
+| `role.guard.spec.ts` | Core | ADMIN permitido, USER para `/403`, múltiplos perfis aceitos, visitante e sessão expirada para `/login` |
+| `visitante.guard.spec.ts` | Core | Visitante liberado na landing, sessão válida redirecionada a `/time`, token expirado tratado como visitante |
+| `error.interceptor.spec.ts` | Core | Status 0, 400 (com e sem mensagem), 401 (login e sessão), 403, 409, 422, 429, 502, 500, resposta de sucesso |
+| `landing-page.component.spec.ts` | Page | Faixas na ordem, um único `h1`, seções nomeadas, zero requisição HTTP, sem promessa de auto-cadastro |
+| `landing-*.component.spec.ts` | Componentes | Âncora do "Como funciona", CTAs para `/login`, cards de funcionalidade e de decisão, prints com `lazy`/`alt`/dimensões, aviso de desvínculo no rodapé |
+| `login-page.component.spec.ts` | Page | Submissão válida, credencial inválida, estado de carregamento, sessão expirada, senha alterada, `redirect` interno e externo, parâmetros chegando com a tela montada |
+| `forbidden-page.component.spec.ts` | Page | Mensagem de acesso restrito e volta para `/time` |
+| `alterar-senha-page.component.spec.ts` | Page | Senhas divergentes, senha curta, sucesso encerrando a sessão, `422` de senha atual incorreta |
+| `usuario.service.spec.ts` | Service | Listagem paginada e ordenada, busca por id, criação, `PATCH` parcial, desativar, reativar, `409` de e-mail e de último ADMIN |
+| `usuarios-page.component.spec.ts` | Page | Listagem, colunas, situação, ausência de senha, confirmação antes de desativar, cancelamento, `409` do último ADMIN, reativação, erro de carga, estado vazio |
+| `usuario-form-page.component.spec.ts` | Page | Validação de e-mail e senha mínima, criação, edição sem campo de senha, `PATCH` só do que mudou, `409` de e-mail e das regras de ADMIN, erro de carga |
+| `loading-spinner.component.spec.ts` | Shared | Spinner DOM, message vazio/preenchido, classe full-page |
+| `alert-banner.component.spec.ts` | Shared | Tipos (warning/error/success/info), ícones, classes CSS, message |
+| `consistencia.util.spec.ts` | Util | Faixas de desvio, badge neutro, tooltip |
+| `consistencia-badge.component.spec.ts` | Shared | Cores por faixa, badge neutro, toggle do tooltip |
+| `orcamento-input.component.spec.ts` | Shared | Validação (>0), limpar, two-way binding, submit no Enter |
+| `score-info.util.spec.ts` | Util | `criterioScore` da API tem prioridade, fallback por posição (GOL/ATA/demais), descrição ausente, `scorePercent` (0/50/100%, teto acima de 12, fracionários) |
+| `performance.util.spec.ts` | Util | Delta indisponível sem pontuação real, classificação verde/amarelo/vermelho por faixa, `deltaPercent`, score sugerido zero sem divisão por zero |
+| `time-mapper.util.spec.ts` | Util | `mapAtleta` (clube/sinônimos/dúvida/substituto), `mapTimeResponse` (flatten, defaults) |
+| `formacao.util.spec.ts` | Util | Formações válidas, limites 2–5, conversão formação → config, validação de composição |
+| `time.service.spec.ts` | Service | GET /api/time, param orçamento, mapeamento agrupado→flat, `nomeClube`→`clube`, `status`→`emDuvida`, substituto recursivo, campos de custo/estratégia, capitão nulo, `avisoMercado`, erros HTTP |
+| `ranking.service.spec.ts` | Service | GET /api/ranking, params `posicao`/`limite`/`excluirDuvida`, limite padrão, propagação de erro |
+| `favoritos.service.spec.ts` | Service | GET /api/favoritos, `oddLimite` opcional, propagação de erro |
+| `comparacao.service.spec.ts` | Service | GET /api/time/comparar, param `formacoes`/orçamento, ordenação, indisponível, `melhorFormacao` |
+| `historico.service.spec.ts` | Service | GET lista, GET por rodada, POST `atualizar-pontuacao`, propagação de erro |
+| `configuracao.service.spec.ts` | Service | GET /api/config, PATCH com body, POST /api/config/reset, erros HTTP |
+| `cache.service.spec.ts` | Service | DELETE /api/cache (todos), DELETE /api/cache/{nome}, erro 400 de nome inválido |
+| `cota.service.spec.ts` | Service | GET de estado e histórico, param `dias` opcional, campos anuláveis preservados, `reinicioDeCota`, `403` |
+| `player-card.component.spec.ts` | Component | Nome, clube, posição, `scorePercent`, critério do score, capitão, dúvida, substituto, luxo, valorização, badge de consistência |
+| `team-view.component.spec.ts` | Component | Filtros por posição, ordem LAT-ZAG-ZAG-LAT, capitão, reserva de luxo, sem TEC, sem LAT |
+| `time-page.component.spec.ts` | Page | Load no init, sucesso, erro, métricas (`titularesCount`, `duvidaCount`, `totalPreco`, `mediaScore`), `avisoMercado`, orçamento (validação/barra/estratégia/`avisoOrcamento`), null state |
+| `ranking-page.component.spec.ts` | Page | Load, filtros, lista de posições, `scorePercent`, critério por posição, ordem da API, badge de consistência, `avisoMercado`, erro |
+| `favoritos-page.component.spec.ts` | Page | `probFavorito`, `probEmpate` (com/sem `oddEmpate`), reset, cards no DOM, erro |
+| `comparacao-page.component.spec.ts` | Page | Chips (2–5), comparar, expandir único, medalhas, modal "Usar formação" + PATCH/redirect, persistência |
+| `historico-page.component.spec.ts` | Page | Load no init, ordem da mais recente para a mais antiga, estado vazio com CTA, erro, classificação do delta, teto da barra, card por rodada, pendente com botão atualizar, gráfico de evolução só com 3+ rodadas reais, atualização inline (reservas fora do total, erro inline) |
+| `historico-detalhe-page.component.spec.ts` | Page | Carga pelo param da rota, split titulares/reservas, `scoreSugeridoTotal`, capitão dobrado no total real, disponibilidade da pontuação, marcadores (capitão/luxo/dúvida), gráfico de barra dupla, delta por atleta, erro de carga, atualização e erro inline |
+| `admin-page.component.spec.ts` | Page | Load config, sync form, salvar, resetar, invalidar todos, invalidar cache, `somasPesos`, `pesosValidos`, validação de `pesoDesvio`, erros |
+| `cota-page.component.spec.ts` | Page | Saldo/consumo/margem, "sem leitura ainda" no lugar de zero, guardrail armado com `proximaSondagem`, histórico falhando sem derrubar a tela, segmento por ciclo e marca de renovação, escala ancorada em zero |
 
-### Comandos
-
-```bash
-# Todos os testes (ChromeHeadless)
-npm test
-
-# Com relatório de cobertura
-npm test -- --code-coverage
-# HTML em coverage/cartolaoddsfe/index.html
-
-# Manter testes em watch mode
-npm test -- --watch
-```
-
----
-
-*Documentação atualizada em 2026 — Projeto Cartola Odds Frontend.*
+Os comandos de execução (incluindo cobertura e watch mode) estão em
+[Testes](../README.md#testes).
 
 ---
 
@@ -1227,11 +1338,9 @@ diferentes (produto, stack, capturas), e separar mantém cada mudança em um arq
 
 ### Independência da API
 
-**Nenhum componente da landing injeta serviço que chame `/api`.** É requisito, não detalhe: a
-landing é a primeira tela de quem chega pelo link — inclusive de um recrutador — e é justamente
-quando o backend pode estar desligado ou em cold start. O teste
-`should render without issuing a single HTTP request` monta a página com o
-`HttpTestingController` e chama `verify()`; qualquer requisição aberta reprova.
+**Nenhum componente da landing injeta serviço que chame `/api`** — requisito verificado por
+teste, com o porquê em
+[Landing pública, prerender e layout do shell](./context.md#landing-pública-prerender-e-layout-do-shell).
 
 ### Acessibilidade e SEO
 
@@ -1254,3 +1363,7 @@ quando o backend pode estar desligado ou em cold start. O teste
 As imagens de `src/assets/landing/` são das telas reais, capturadas contra uma API de
 demonstração com dados fictícios. O procedimento e a regra de manutenção estão em
 [`prints-da-landing.md`](./prints-da-landing.md).
+
+---
+
+*Documentação atualizada em 2026 — Projeto Cartola Odds Frontend.*

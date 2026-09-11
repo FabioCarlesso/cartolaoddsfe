@@ -1,17 +1,25 @@
 # Context — Cartola Odds Frontend
 
-> Arquivo de contexto para desenvolvimento assistido por IA.  
-> Leia este arquivo antes de qualquer tarefa neste repositório.
+> **Papel deste arquivo:** decisões de arquitetura, convenções do código e as regras de negócio
+> refletidas na UI — o *porquê* das coisas. Leia antes de qualquer tarefa neste repositório,
+> inclusive em desenvolvimento assistido por IA.
+>
+> O *o quê* mora nos outros dois: [`../README.md`](../README.md) diz o que é o projeto e como
+> rodá-lo; [`documentacao.md`](./documentacao.md) é a referência técnica (rotas, componentes,
+> serviços, modelos, build, Docker, testes).
 
 ---
 
 ## O que é este projeto
 
-Frontend Angular 21 que consome a **Cartola Odds API** (backend Java/Spring Boot) e apresenta dados estratégicos para jogadores do Cartola FC (fantasy football brasileiro).
+Frontend Angular 21 que consome a **Cartola Odds API** (backend Java/Spring Boot) e apresenta
+dados estratégicos para jogadores do Cartola FC (fantasy football brasileiro).
 
 O usuário final quer montar o melhor time possível cruzando:
 - Métricas dos atletas (média de pontos, variação, preço)
 - Odds do Brasileirão (qual time é favorito a vencer)
+
+A lista de telas e o que cada uma entrega está na [visão geral do README](../README.md#visão-geral).
 
 ---
 
@@ -21,117 +29,36 @@ O usuário final quer montar o melhor time possível cruzando:
 - **URL local:** `http://localhost:8080`
 - **Docs:** `docs/documentacao_api.md` (ver arquivo de referência da API no backend)
 
-### Endpoints consumidos
+Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/auth/login`. A
+relação de endpoints consumidos, com parâmetros e o serviço que chama cada um, está em
+[Serviços HTTP](./documentacao.md#7-serviços-http).
 
-Todos os endpoints exigem `Authorization: Bearer <token>`, exceto `POST /api/auth/login`.
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/api/auth/login` | Autentica e devolve o access token JWT (único endpoint público) |
-| PATCH | `/api/usuarios/me/senha` | Troca a senha do usuário autenticado (invalida o token atual) |
-| GET/POST | `/api/usuarios` | Lista (paginada) e cria usuários — restrito a ADMIN |
-| GET/PATCH/DELETE | `/api/usuarios/{id}` | Busca, atualiza e desativa um usuário — restrito a ADMIN |
-| GET | `/api/time` | Monta o time ideal da rodada |
-| GET | `/api/time/comparar` | Monta e compara o melhor time entre múltiplas formações |
-| GET | `/api/ranking` | Lista atletas ordenados por score |
-| GET | `/api/favoritos` | Times favoritos por odds da rodada |
-| GET | `/api/odds/cota` | Estado da cota da The Odds API e do guardrail — restrito a ADMIN |
-| GET | `/api/odds/cota/historico` | Série das leituras de cota na janela — restrito a ADMIN |
-
-### Parâmetros relevantes
-
-- `GET /api/ranking?posicao=ATA&limite=25` — filtra por posição e quantidade
-- `GET /api/favoritos?oddLimite=3.0` — customiza o limite de odd para ser considerado favorito
-- Se `oddLimite` não for enviado, o backend usa o valor de `application.properties` (padrão: 3.0)
-- `GET /api/time/comparar?formacoes=4-3-3&formacoes=3-4-3&orcamento=120` — um parâmetro `formacoes` por formação (2 a 5) e `orcamento` opcional; resposta com `melhorFormacao` e `resultados` ordenados por `scoreTotal`
-- `GET /api/odds/cota/historico?dias=30` — janela de 1 a 92 dias, padrão 30; a série não é agregada (30 dias ≈ 500 itens)
-
-#### Cota da The Odds API: `null` não é zero
-
-`saldoRestante`, `consumoMes`, `ultimaLeitura`, `ultimaSondagem` e `proximaSondagem` vêm `null` quando nenhuma leitura de header ocorreu desde o boot da API. A `/cota` mostra "sem leitura ainda" nesses casos: renderizar `0` diria "cota esgotada" no exato momento em que a informação correta é "ainda não perguntamos" — e as duas situações pedem reações opostas.
-
-Cada leitura do histórico traz `reinicioDeCota`, que a API calcula comparando com a leitura anterior. O gráfico quebra a linha nesses pontos em vez de desenhar a queda do consumo, que pareceria falha de coleta.
-
-Os instantes são `LocalDateTime` sem offset, na hora local do servidor — o mesmo formato de `updatedAt` do `/api/config`.
+O backend é a autoridade sobre autorização, paginação e valores padrão de parâmetros omitidos
+(ex.: `oddLimite` cai no valor de `application.properties`). O frontend não replica nenhuma
+dessas decisões — ele reage ao que a API responde.
 
 ---
 
-## Stack do Frontend
+## Decisões de stack
 
-| Item | Detalhe |
+As versões estão na [tabela de stack do README](../README.md#stack). O que importa aqui é o
+porquê de cada escolha:
+
+| Decisão | Justificativa |
 |---|---|
-| Framework | Angular 21.2 — **standalone components** (sem NgModules) |
-| Linguagem | TypeScript 5.9 com `strict: true` |
-| Estilo | SCSS puro (sem frameworks CSS externos) |
-| HTTP | `HttpClient` com interceptor funcional |
-| Forms | `ReactiveFormsModule` não usado — apenas `FormsModule` para dois filtros simples |
-| State | Local component state (signals/NgRx não são necessários ainda) |
-| Routing | Lazy loading por `loadComponent`; cada rota declara o próprio `title` |
-| SSG | `@angular/ssr` + `platform-server` pré-renderizam só a rota `/` no build (sem servidor Node) |
-| Build | esbuild via `@angular-devkit/build-angular:application` |
+| Standalone components, sem NgModules | Padrão desde o Angular 17 — sem o boilerplate de módulo, cada componente declara seus próprios imports |
+| Lazy loading por rota (`loadComponent`) | Reduz o bundle inicial; cada feature carrega sob demanda. Cada rota declara também o próprio `title` |
+| `inject()` em vez de construtor | Código mais conciso e compatível com signals |
+| TypeScript `strict: true` | Erro de contrato aparece no build, não em runtime |
+| SCSS puro, sem framework CSS | O design system cabe em CSS custom properties; um framework traria mais peso que ajuda |
+| Só `FormsModule` (sem `ReactiveFormsModule`) | Os formulários do app são simples; dois filtros e um punhado de campos não justificam a camada reativa |
+| Estado local no componente | Signals globais/NgRx não são necessários no escopo atual — a exceção é a sessão (ver [Estado local](#estado-local)) |
+| Inline styles em componentes menores | Encapsulamento total; evita conflitos de CSS global |
+| `subscribe` explícito em vez de `async pipe` | Um padrão só: `subscribe` no `OnInit`, com o estado de carregamento e erro na mão do componente |
+| SSG só da rota `/` (`@angular/ssr` + `platform-server`) | Entrega a landing pronta no HTML sem precisar de servidor Node em produção (ver [Landing pública, prerender e layout do shell](#landing-pública-prerender-e-layout-do-shell)) |
+| esbuild (`@angular-devkit/build-angular:application`) | Builder padrão do Angular 21 |
 
----
-
-## Estrutura de Arquivos
-
-```
-src/app/
-├── core/
-│   ├── models/auth.model.ts                 ← Perfil, LoginRequest/Response, SessaoUsuario
-│   ├── services/auth.service.ts             ← sessão em signals; token é a fonte de verdade
-│   ├── models/usuario.model.ts              ← Usuario, requests e Pagina<T>
-│   ├── guards/auth.guard.ts                 ← protege as rotas internas, guarda ?redirect=
-│   ├── guards/role.guard.ts                 ← restringe rota por perfil (→ /403)
-│   ├── guards/visitante.guard.ts            ← libera a landing só para quem não tem sessão
-│   └── interceptors/
-│       ├── auth.interceptor.ts              ← Authorization: Bearer + logout no 401
-│       └── error.interceptor.ts             ← mapeia erros HTTP → mensagens PT-BR
-├── shared/
-│   ├── models/
-│   │   ├── atleta.model.ts         ← interface Atleta
-│   │   ├── time.model.ts           ← interface TimeResponse
-│   │   ├── ranking.model.ts        ← interface RankingResponse
-│   │   ├── favoritos.model.ts      ← interfaces JogoFavorito, JogoDescartado, FavoritosResponse
-│   │   └── comparacao.model.ts     ← interfaces FormacaoComparada, CompararResponse
-│   ├── utils/
-│   │   ├── time-mapper.util.ts     ← mapAtleta / mapTimeResponse (compartilhado entre time e comparação)
-│   │   └── formacao.util.ts        ← formações válidas + conversão formação → config
-│   └── components/
-│       ├── loading-spinner/        ← spinner com message e fullPage
-│       ├── alert-banner/           ← banner tipo warning/error/info/success
-│       └── orcamento-input/        ← input reutilizável de orçamento (cartoletas)
-└── features/
-    ├── landing/                     ← página pública da raiz (nenhuma faixa chama /api)
-    │   ├── _secao.scss              ← mixins das faixas (largura, sobrancelha, foco visível)
-    │   ├── components/              ← landing-topo, -hero, -como-funciona, -funcionalidades,
-    │   │                              -prints, -tecnologia, -rodape (um componente por faixa)
-    │   └── pages/landing-page/      ← compõe as faixas na ordem da página
-    ├── auth/
-    │   └── pages/
-    │       ├── login-page/         ← formulário reativo de login
-    │       ├── forbidden-page/     ← aviso de acesso restrito (/403)
-    │       └── alterar-senha-page/ ← troca da própria senha
-    ├── usuarios/
-    │   ├── services/usuario.service.ts
-    │   └── pages/
-    │       ├── usuarios-page/       ← listagem + ativar/desativar com confirmação
-    │       └── usuario-form-page/   ← criação e edição (senha só na criação)
-    ├── time/
-    │   ├── services/time.service.ts
-    │   ├── components/
-    │   │   ├── player-card/        ← card individual de atleta
-    │   │   └── team-view/          ← campo visual 4-3-3
-    │   └── pages/time-page/        ← página principal do time
-    ├── ranking/
-    │   ├── services/ranking.service.ts
-    │   └── pages/ranking-page/     ← tabela com filtros
-    ├── favoritos/
-    │   ├── services/favoritos.service.ts
-    │   └── pages/favoritos-page/   ← cards de partida + probabilidades
-    └── comparacao/
-        ├── services/comparacao.service.ts
-        └── pages/comparacao-page/  ← chips de formação + cards ranqueados + detalhe colapsável
-```
+A estrutura de pastas correspondente está em [Arquitetura](./documentacao.md#1-arquitetura).
 
 ---
 
@@ -159,6 +86,8 @@ constructor(private service: MyService) {} // ← evitar
 - `providedIn: 'root'` em todos os serviços
 - Retornam `Observable<T>` — sem conversão para Promise
 - URL base sempre `/api` (resolve via proxy em dev)
+- O mapeamento do formato da API para os models do frontend é responsabilidade do serviço, não
+  do componente: os templates nunca veem o formato raw (ver [`TimeService`](./documentacao.md#timeservice))
 
 ### Estado local
 
@@ -185,6 +114,11 @@ error: (err) => {
 }
 ```
 
+A ordem dos interceptors não é detalhe de estilo: o `errorInterceptor` devolve a **mesma
+instância** de `HttpErrorResponse`, porque o `authInterceptor` reconhece o `401` de sessão pelo
+`instanceof` — uma cópia o desligaria em silêncio. O mapeamento status → mensagem está em
+[Interceptor de Erros](./documentacao.md#5-interceptor-de-erros).
+
 ### Landing pública, prerender e layout do shell
 
 A rota `''` carrega a landing com o `visitanteGuard` (com sessão válida, redireciona para
@@ -194,14 +128,26 @@ faixas sangram de ponta a ponta. Uma rota nova com layout fluido só precisa dec
 
 Nenhum componente da landing pode injetar serviço que chame `/api`: a página precisa renderizar
 inteira com o backend desligado, e há teste que reprova qualquer requisição aberta na montagem.
+É requisito, não detalhe — a landing é a primeira tela de quem chega pelo link, inclusive de um
+recrutador, e é justamente quando o backend pode estar desligado ou em cold start. O teste
+`should render without issuing a single HTTP request` monta a página com o
+`HttpTestingController` e chama `verify()`; qualquer requisição aberta reprova.
+
 Essa restrição é também o que permite pré-renderizá-la no build (`prerender-routes.txt` lista só
 `/`): o HTML da landing sai pronto, e o `index.csr.html` continua sendo o shell das demais rotas.
+A separação entre os dois HTML evita o efeito colateral do prerender: se o fallback de SPA
+devolvesse o `index.html`, quem abrisse `/time` direto veria a landing por um instante antes de a
+aplicação assumir a tela.
+
+Pelo mesmo motivo, `discoverRoutes: false` é deliberado no `angular.json`: descobrir as rotas
+automaticamente faria o build tentar pré-renderizar as telas internas, que exigem sessão e
+chamam a API — sem backend no build, elas congelariam uma tela de erro no HTML.
 
 O `layoutFluido` fica `undefined` até a primeira navegação terminar e, nesse intervalo, o shell
 não desenha cabeçalho nem rodapé — assumir "rota normal" fazia a navbar piscar sobre a landing
 pré-renderizada e empurrar a página 64px para baixo.
 As capturas em `src/assets/landing/` são das telas reais e têm regra de manutenção própria em
-`docs/prints-da-landing.md`.
+[`prints-da-landing.md`](./prints-da-landing.md).
 
 ### Sessão e autorização
 
@@ -213,27 +159,33 @@ Guardas de rota são defesa de **experiência**, não de segurança: quem editar
 `localStorage` vê a tela, mas a API recusa a operação. A autorização real é sempre a do
 backend. O mesmo vale para esconder itens do menu por perfil.
 
+A raiz usa o `visitanteGuard`, inverso do `authGuard`: libera a landing para quem não tem sessão
+e encaminha ao `/time` quem já tem — o bookmark mais comum de quem usa o app todo dia. É também
+para onde vai qualquer URL desconhecida, e não `/time`: assim um visitante deslogado nunca cai
+numa tela de login sem contexto.
+
 Nenhuma senha aparece em tela — nem na listagem de usuários, nem na edição. O `PATCH` de
 usuário não a aceita; quem troca a própria senha usa `/alterar-senha`.
+
+O token vive em `localStorage`, com toda leitura protegida: em navegador com storage bloqueado a
+sessão passa a viver em memória e se perde no reload. Cookie `HttpOnly` + CSRF seria mais seguro
+e foi descartado pelo custo frente ao perfil de uso — aplicação pessoal, sem dados de terceiros.
 
 ---
 
 ## Design System
 
-Tema escuro football inspirado em campo de futebol.
-
-Arquivo: `src/styles.scss` — define CSS custom properties globais.
+Tema escuro football inspirado em campo de futebol, definido em `src/styles.scss` via CSS custom
+properties. A paleta completa, as classes utilitárias globais e a tipografia estão em
+[Design System](./documentacao.md#14-design-system).
 
 **Regras:**
 - Nunca hardcode de cores nos componentes — sempre usar variáveis CSS (`var(--green-primary)`)
 - Componentes podem ter estilos encapsulados (`:host` + component styles)
 - Responsivo: mobile-first implícito, breakpoints em `640px` e `1024px`
-
-**Cores chave:**
-- `#22c55e` — verde (score bom, favorito, provável)
-- `#f59e0b` — âmbar/dourado (dúvida, capitão)
-- `#ef4444` — vermelho (erro, adversário)
-- `#0a0f1a` — fundo escuro
+- O cabeçalho degrada em etapas (1120px, 1000px, 640px, 480px) porque, como ADMIN, ele carrega
+  sete links mais o nome e o **Sair**; sem isso a página ganhava scroll horizontal e o **Sair**
+  saía da tela
 
 ---
 
@@ -271,27 +223,34 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 - O valor de `score` vem pronto da API e deve ser tratado como fonte de verdade para ranking/listagens
 - A API pode enviar metadados opcionais (`criterioScore`, `scoreCriterio`, `tipoScore`, `estrategiaScore`, `descricaoScore`, `pesosScore`) para explicar o cálculo usado
 - Se não houver metadados, o frontend mostra fallback visual por posição: goleiros como critério defensivo, atacantes como critério ofensivo e demais posições como critério padrão da API
-- Máximo assumido de 12 pontos para a barra de progresso
-- `scorePercent = Math.min((score / 12) * 100, 100)`
-- Scores acima de 12 ficam em 100% da barra
+- Máximo assumido de 12 pontos para a barra de progresso; scores acima de 12 ficam em 100% da
+  barra (fórmula em [`PlayerCardComponent`](./documentacao.md#playercardcomponent))
 
 ### Indicador de Consistência (desvio padrão)
 
-- A API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`, tanto em `/api/time` quanto em `/api/ranking`
-- **Status do contrato (validado em 22/05/2026 contra `localhost:8080`):** `pesoDesvio` existe em `/api/config` e os campos `desvioPadrao`/`rodadasConsideradas` são retornados em `AtletaDto`/`AtletaRankingDto` com esses nomes oficiais (sem sinônimos). Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico), o desvio não é calculável e o frontend exibe o badge neutro ⚪ — degradação graciosa.
-- O frontend exibe um badge colorido ao lado do score nas telas de **Ranking** e **Time**
-- Classificação centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`):
-  - `0.0 – 2.0` → 🟢 Consistente
-  - `2.1 – 4.0` → 🟡 Moderado
-  - `> 4.0` → 🔴 Instável
-  - `rodadasConsideradas < 2` → ⚪ Histórico insuficiente (desvio não calculável)
-- Componente reutilizável `app-consistencia-badge` com tooltip (hover no desktop, toque no mobile)
+- A API envia `desvioPadrao` e `rodadasConsideradas` dentro de cada `Atleta`, tanto em `/api/time` quanto em `/api/ranking` — são os nomes oficiais de `AtletaDto`/`AtletaRankingDto`, sem sinônimos —, e `pesoDesvio` existe em `/api/config`
+- Quando `rodadasConsideradas < 2` (ex.: início de temporada, sem histórico), o desvio não é calculável e o frontend exibe o badge neutro ⚪ — degradação graciosa
+- A classificação é centralizada em `shared/utils/consistencia.util.ts` (`getConsistenciaBadge`); as faixas de desvio e o comportamento do badge estão em [`ConsistenciaBadgeComponent`](./documentacao.md#consistenciabadgecomponent)
 - A configuração `pesoDesvio` (0.0–1.0, padrão 0.05) controla a penalidade no backend; editável no `/admin`
+
+> **Sobre a conferência do contrato.** Os nomes acima foram conferidos à mão contra o backend em
+> `localhost:8080`, e uma conferência manual envelhece: ela vale para a versão da API daquele dia
+> e nada acusa a divergência depois. É o que a issue #45 (gerar os models TypeScript a partir do
+> contrato OpenAPI) resolve — quando ela entrar, o compilador passa a fazer essa checagem a cada
+> build e esta nota deixa de ser necessária.
 
 ### Probabilidade Implícita (Favoritos)
 
-- Calculada como `(1/odd) / sum(1/odds)` para cada desfecho
+- Calculada a partir das odds de cada desfecho (fórmula em [`FavoritosPageComponent`](./documentacao.md#favoritospagecomponent))
 - Inclui overround da casa de apostas — total > 100% é esperado
+
+### Cota da The Odds API: `null` não é zero
+
+Campo anulável da API nunca vira `0` na tela. `saldoRestante`, `consumoMes` e os instantes de
+leitura vêm `null` enquanto nenhuma leitura de header ocorreu desde o boot da API, e a `/cota`
+mostra "sem leitura ainda" nesses casos: saldo baixo e saldo não lido são estados diferentes e
+pedem reações opostas. O detalhamento da tela, das grandezas derivadas e do gráfico está em
+[`CotaPageComponent`](./documentacao.md#cotapagecomponent).
 
 ---
 
@@ -302,79 +261,25 @@ Arquivo: `src/styles.scss` — define CSS custom properties globais.
 - Não hardcode a URL `localhost:8080` nos serviços — usar sempre `/api`
 - Não usar `*ngIf`/`*ngFor` — usar a nova sintaxe `@if`/`@for`
 - Não adicionar dependências externas (Material, PrimeNG, etc.) sem alinhamento prévio
+- Não repassar a `mensagem` do backend num `5xx` — ela já chegou à tela com SQL e nomes de colunas
 
 ---
 
-## Mapeamento da API — TimeService
+## Docker — decisões e limites
 
-O backend retorna `titulares` e `reservas` agrupados por posição:
+A relação de arquivos, variáveis de ambiente e comandos está em
+[Docker](./documentacao.md#17-docker). As decisões por trás dela:
 
-```json
-{
-  "titulares": { "ATA": [...], "MEI": [...], "ZAG": [...] },
-  "reservas":  { "ATA": {...}, "MEI": {...} }
-}
-```
-
-O `TimeService` transforma isso para arrays planos antes de emitir o `Observable<TimeResponse>`:
-- `nomeClube` → `clube`
-- `status` (string `"⚠️ Dúvida"`) → `emDuvida` (boolean)
-- `substitutoProvavel` mapeado recursivamente
-
-Os models (`Atleta`, `TimeResponse`) e todos os templates trabalham com o formato já mapeado — sem acesso ao formato raw.
-
----
-
-## Docker e Containerização
-
-### Arquivos Docker
-
-| Arquivo | Papel |
-|---|---|
-| `Dockerfile` | Build multi-stage: Node 20 Alpine (build) → nginx 1.27 Alpine (runtime) |
-| `nginx.conf.template` | Config nginx com `envsubst` — proxy `/api/`, SPA routing, gzip, cache 1 ano |
-| `docker-compose.yml` | Serviço `frontend` com healthcheck e resource limits |
-| `.env.example` | Template de variáveis de ambiente — copiar para `.env` antes de usar |
-| `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs, docs do contexto de build |
-
-### Variáveis de ambiente
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
-| `APP_PORT` | `4200` | Porta exposta no host |
-
-### Como funciona
-
-- O CMD do container executa `envsubst` para substituir `${BACKEND_URL}` no `nginx.conf.template` antes de iniciar o nginx — sem rebuild da imagem para trocar de backend.
-- `nginx` faz proxy de `/api/` para `${BACKEND_URL}/api/`, eliminando CORS em produção (mesmo comportamento do `proxy.conf.json` em dev).
-- Build output esperado pelo Dockerfile: `dist/cartolaoddsfe/browser/` (path do Angular 21 com esbuild).
-- Container roda como usuário não-root (`appuser`) por segurança.
-
-### Acesso ao backend em localhost:8080
-
-O container não pode usar `localhost` para atingir o host — `localhost` dentro do container é o próprio container.
-
-A solução é `host.docker.internal`, que resolve para o IP do host:
-- **Docker Desktop (Mac/Windows):** funciona automaticamente.
-- **Linux:** requer `extra_hosts: ["host.docker.internal:host-gateway"]` no `docker-compose.yml` — já incluído.
-
-Se o backend estiver em `localhost:8080` no host, **nenhuma configuração adicional** é necessária — o padrão `BACKEND_URL=http://host.docker.internal:8080` já resolve corretamente.
+- **Multi-stage build** — Node não existe na imagem final: ~25 MB de nginx alpine contra ~300 MB, e menos superfície de ataque
+- **Usuário não-root** — o container roda como `appuser`
+- **`envsubst` em runtime** — `BACKEND_URL` é substituído no `nginx.conf.template` na inicialização do container, então trocar de backend não exige rebuild da imagem
+- **Proxy nginx** — `/api/*` é proxiado para o backend, eliminando CORS em produção (mesmo comportamento do `proxy.conf.json` em dev)
+- **`extra_hosts`** — o container não pode usar `localhost` para atingir o host, porque `localhost` dentro do container é o próprio container. `host.docker.internal` resolve isso: no Docker Desktop (Mac/Windows) funciona automaticamente e no Linux o `docker-compose.yml` já traz `extra_hosts: ["host.docker.internal:host-gateway"]`, que mapeia o nome para o IP do host. Com o backend em `localhost:8080`, o padrão `BACKEND_URL=http://host.docker.internal:8080` funciona em qualquer plataforma, sem configuração extra
+- **Cache de assets e gzip** — JS/CSS/fontes com `Cache-Control: public, immutable, 1y`; compressão para todos os tipos de texto
+- **128 MB de limite de memória** — o nginx consome muito menos que o backend Java; o limite é suficiente para desenvolvimento e uso moderado em produção
 
 ### O que NÃO fazer em Docker
 
 - Não hardcode a URL do backend na imagem — usar `BACKEND_URL` via variável de ambiente
 - Não expor porta 8080 no container de frontend — nginx escuta na 80 internamente
 - Não editar `nginx.conf.template` sem testar o `envsubst` manualmente
-
----
-
-## Próximas Melhorias Previstas
-
-- [ ] Dark/light mode toggle
-- [ ] Página de dashboard com resumo de todas as features
-- [ ] Gráficos de score por posição (Chart.js ou D3)
-- [ ] Histórico de rodadas
-- [ ] Filtro de budget máximo (C$) na tela de Time
-- [ ] PWA / Service Worker para cache offline
-- [ ] NgRx Signals para estado global (quando a complexidade justificar)
