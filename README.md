@@ -138,15 +138,13 @@ em [Docker — decisões e limites](./docs/context.md#docker--decisões-e-limite
 | [`docs/funcionalidades.md`](./docs/funcionalidades.md) | Comportamento de cada tela: sessão, erros, modelos, serviços e features |
 | [`docs/rotas.md`](./docs/rotas.md) | Mapa de rotas com componente, guarda e nível de acesso |
 | [`docs/design-system.md`](./docs/design-system.md) | Paleta, classes utilitárias e tipografia |
-| [`docs/desenvolvimento.md`](./docs/desenvolvimento.md) | Ferramental e estratégia de testes, com a cobertura por spec |
+| [`docs/desenvolvimento.md`](./docs/desenvolvimento.md) | Ferramental de testes, estratégia por camada e onde cada spec vive |
 | [`docs/deploy.md`](./docs/deploy.md) | Build de produção, prerender, Docker e nginx |
 | [`docs/context.md`](./docs/context.md) | Decisões de arquitetura, convenções do código e as regras de negócio refletidas na UI |
-| [`docs/prints-da-landing.md`](./docs/prints-da-landing.md) | Como refazer as capturas de tela usadas na landing |
+| [`docs/prints-da-landing.md`](./docs/prints-da-landing.md) | Como refazer as capturas de tela usadas na landing, e quando isso é obrigatório |
 
 Antes de documentar uma mudança, veja em [`docs/README.md`](./docs/README.md) qual arquivo é o
 dono do assunto.
-
-> **Regra do repositório:** PR que muda a aparência das telas de time, ranking, comparação ou histórico precisa refazer o print correspondente da landing. A página é pública e é a primeira coisa que alguém vê do projeto.
 
 ---
 

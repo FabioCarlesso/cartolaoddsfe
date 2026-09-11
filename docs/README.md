@@ -6,7 +6,7 @@
 | [`funcionalidades.md`](funcionalidades.md) | Comportamento de cada tela e do que a sustenta: sessão, erros, modelos, serviços HTTP, componentes compartilhados e features |
 | [`rotas.md`](rotas.md) | Mapa completo de rotas, com componente carregado, guarda e nível de acesso |
 | [`design-system.md`](design-system.md) | Paleta, classes utilitárias globais e tipografia |
-| [`desenvolvimento.md`](desenvolvimento.md) | Ferramental de testes, estratégia por camada e cobertura por spec |
+| [`desenvolvimento.md`](desenvolvimento.md) | Ferramental de testes, estratégia por camada e onde cada spec vive |
 | [`deploy.md`](deploy.md) | Build de produção, prerender da landing, Docker e nginx |
 | [`context.md`](context.md) | Decisões de arquitetura, convenções do código e regras de negócio — o porquê das coisas |
 | [`prints-da-landing.md`](prints-da-landing.md) | Como refazer as capturas de tela usadas na landing |
@@ -30,6 +30,7 @@ dono:
 | Testes, cobertura ou ferramental de desenvolvimento | `docs/desenvolvimento.md` |
 | Build, prerender, Docker ou nginx | `docs/deploy.md` |
 | Uma decisão técnica, uma convenção ou uma regra de negócio — e o porquê dela | `docs/context.md` |
+| A aparência de uma tela de time, ranking, comparação ou histórico | `docs/prints-da-landing.md` — refaça o print correspondente, que é o que o visitante vê primeiro |
 | **Como instalar ou rodar o projeto** | `README.md` — e só nesse caso |
 
 Regra prática: se a informação não ajuda alguém a colocar o projeto no ar nos primeiros cinco
