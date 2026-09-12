@@ -52,13 +52,45 @@ server {
 
     # Proxy reverso para o backend — repassa somente os headers de
     # segurança definidos pelo Spring Security, sem sobreposição do nginx
-    location /api/ {
-        proxy_pass ${BACKEND_URL}/api/;
+    #
+    # `^~` e não um prefixo simples: com `^~` o nginx para a busca aqui e nem
+    # chega a testar os `location` de regex declarados acima, então um
+    # `/api/algo.png` continua indo para o backend em vez de cair na regra de
+    # assets estáticos.
+    location ^~ /api/ {
+        # O endereço do backend é re-resolvido a cada `valid=10s`, e não uma
+        # única vez na subida do container.
+        #
+        # Isto é o que evita o modo de falha silencioso da plataforma: escrever
+        # o hostname direto no `proxy_pass` faz o nginx resolvê-lo no parse da
+        # configuração e guardar o IP enquanto o processo viver. Quando o
+        # backend é reimplantado ele ganha um IP novo na rede privada, o nginx
+        # segue discando o IP antigo — que não responde mais — e toda chamada
+        # de /api/ morre em 504 com "upstream timed out while connecting",
+        # sem nunca alcançar o backend (por isso não há log do outro lado).
+        # Só um restart do frontend limpava o cache, até a próxima vez.
+        #
+        # Passar o destino por variável obriga o nginx a consultar o resolver a
+        # cada requisição, respeitando o TTL abaixo. O resolver vem do
+        # /etc/resolv.conf do próprio container, injetado na inicialização —
+        # não dá para fixar o IP do DNS, ele muda conforme a plataforma.
+        resolver ${NGINX_RESOLVER} valid=10s ipv6=on;
+        resolver_timeout 5s;
+
+        set $backend "${BACKEND_URL}";
+
+        # $request_uri preserva o caminho e a query string originais. Como este
+        # location casa /api/ e o backend também serve sob /api/, o caminho vai
+        # inteiro, sem reescrita.
+        proxy_pass $backend$request_uri;
+
         proxy_http_version 1.1;
         proxy_set_header Host              $host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        # $forwarded_proto, e não $scheme: preserva o esquema da borda. O porquê
+        # está em nginx-api-header-fallback.conf, onde o map é declarado.
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
         proxy_read_timeout  30s;
         proxy_connect_timeout 10s;
 

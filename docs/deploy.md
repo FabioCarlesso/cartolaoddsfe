@@ -62,7 +62,8 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 | Arquivo | Descrição |
 |---|---|
 | `Dockerfile` | Build multi-stage: Node 20 Alpine (build) + nginx 1.27 Alpine (runtime) |
-| `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` |
+| `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` e `NGINX_RESOLVER` |
+| `docker-entrypoint.sh` | Descobre o DNS do container, fixa nome vindo do `/etc/hosts`, renderiza o template e sobe o nginx |
 | `docker-compose.yml` | Orquestração com healthcheck e resource limits |
 | `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
 | `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs e docs do contexto de build |
@@ -94,7 +95,8 @@ Configurações habilitadas:
 | Recurso | Detalhe |
 |---|---|
 | SPA routing | `try_files $uri $uri/ /index.html` — suporta client-side routing |
-| Proxy `/api/` | Proxia para `${BACKEND_URL}/api/` — sem CORS em produção |
+| Proxy `/api/` | Proxia para `${BACKEND_URL}` preservando o caminho original — sem CORS em produção. O `location` usa `^~` para que um `/api/algo.png` não caia na regra de assets estáticos |
+| Re-resolução do backend | O destino passa por variável (`set $backend`) com `resolver ... valid=10s`, então o nginx reconsulta o DNS a cada 10s em vez de congelar o IP na subida. Sem isso, um redeploy do backend com IP novo deixa `/api/` em 504 `upstream timed out while connecting` até o frontend reiniciar |
 | Cache de assets | `Cache-Control: public, immutable` por 1 ano para JS/CSS/fontes |
 | Gzip | Compressão habilitada para `text/*`, `application/json`, `application/javascript` |
 | Security headers | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` — definidos em `nginx-security-headers.conf` e incluídos em cada `location` do SPA. Em `/api/` valem os headers do Spring Security; o nginx só preenche como fallback quando gera a resposta sozinho (502/504). `X-XSS-Protection` não é enviado: o auditor XSS legado foi removido dos navegadores e o backend define `0` deliberadamente |
@@ -104,6 +106,8 @@ Configurações habilitadas:
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `BACKEND_URL_FROM_ETC_HOSTS` | desligado | Deixa o entrypoint fixar, na subida, o IP de um `BACKEND_URL` cujo nome só exista no `/etc/hosts` — o `host.docker.internal` do desenvolvimento, que o resolver do nginx não enxerga. O `docker-compose.yml` liga. **Não definir em produção**: lá o nome precisa ser re-resolvido a cada requisição, já que o backend troca de IP a cada deploy |
+| `NGINX_RESOLVER` | lido do `/etc/resolv.conf` | Servidores de DNS usados para re-resolver o `BACKEND_URL`. Definido pelo `docker-entrypoint.sh`; sobrescrever só para apontar a um DNS específico |
 | `APP_PORT` | `4200` | Porta exposta no host |
 
 ### Comandos
@@ -131,6 +135,7 @@ docker build -t cartola-odds-frontend:1.0.0 .
 docker run -p 4200:80 \
   --add-host=host.docker.internal:host-gateway \
   -e BACKEND_URL=http://host.docker.internal:8080 \
+  -e BACKEND_URL_FROM_ETC_HOSTS=1 \
   cartola-odds-frontend:1.0.0
 ```
 
