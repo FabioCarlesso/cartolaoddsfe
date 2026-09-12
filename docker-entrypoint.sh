@@ -36,6 +36,52 @@ fi
 
 export NGINX_RESOLVER
 
+# O resolver do nginx fala DNS e só DNS: ele não consulta o /etc/hosts. Isso
+# atropelaria o padrão de desenvolvimento deste repo — `host.docker.internal`
+# existe apenas no /etc/hosts, posto lá pelo Docker Desktop ou pelo
+# `extra_hosts` do compose no Linux — e todo /api/ responderia 502
+# "could not be resolved (3: Host not found)".
+#
+# A saída é fixar o IP na URL quando, e somente quando, o nome vier do
+# /etc/hosts. Não reabre o problema que este entrypoint existe para resolver:
+# uma entrada de /etc/hosts é estática pela vida do container, então não há o
+# que reconsultar. O cache que precisava ser evitado é o do DNS da plataforma,
+# onde o backend troca de IP a cada deploy — e esse caminho segue intocado,
+# re-resolvido a cada `valid=10s`.
+fixa_host_do_etc_hosts() {
+    [ -n "${BACKEND_URL:-}" ] || return 0
+
+    _resto=${BACKEND_URL#*://}
+    case $_resto in
+        '['*) return 0 ;;   # literal IPv6 entre colchetes: não há nome a resolver
+    esac
+
+    _host=${_resto%%[:/]*}
+    [ -n "$_host" ] || return 0
+
+    # Lê o IP do próprio /etc/hosts, em vez de delegar a `getent`: é um utilitário
+    # que nem toda imagem enxuta traz, e a intenção aqui é justamente consultar o
+    # arquivo, não o resolvedor do sistema. O nome é comparado campo a campo
+    # (a partir do segundo, que é onde ficam hostname e apelidos — nunca o IP),
+    # sem diferenciar maiúsculas, descartando comentário de linha e de fim de linha.
+    _ip=$(awk -v nome="$_host" '
+        { sub(/#.*/, "") }
+        NF < 2 { next }
+        {
+            for (i = 2; i <= NF; i++) {
+                if (tolower($i) == tolower(nome)) { print $1; exit }
+            }
+        }' /etc/hosts 2>/dev/null)
+    [ -n "$_ip" ] || return 0
+    case $_ip in *:*) _ip="[$_ip]" ;; esac   # IPv6 precisa de colchetes na URL
+
+    BACKEND_URL="${BACKEND_URL%%://*}://${_ip}${_resto#"$_host"}"
+    export BACKEND_URL
+    echo "entrypoint: ${_host} vem do /etc/hosts; fixando ${_ip} (o resolver do nginx não lê /etc/hosts)" >&2
+}
+
+fixa_host_do_etc_hosts
+
 echo "entrypoint: BACKEND_URL=${BACKEND_URL:-<não definido>} NGINX_RESOLVER=${NGINX_RESOLVER}" >&2
 
 envsubst '${BACKEND_URL} ${NGINX_RESOLVER}' \

@@ -63,7 +63,7 @@ Para produção, configure o servidor web (nginx/Apache) para redirecionar `/api
 |---|---|
 | `Dockerfile` | Build multi-stage: Node 20 Alpine (build) + nginx 1.27 Alpine (runtime) |
 | `nginx.conf.template` | Config nginx com template envsubst para `BACKEND_URL` e `NGINX_RESOLVER` |
-| `docker-entrypoint.sh` | Descobre o DNS do container, renderiza o template e sobe o nginx |
+| `docker-entrypoint.sh` | Descobre o DNS do container, fixa nome vindo do `/etc/hosts`, renderiza o template e sobe o nginx |
 | `docker-compose.yml` | Orquestração com healthcheck e resource limits |
 | `.env.example` | Template de variáveis — copiar para `.env` antes de usar |
 | `.dockerignore` | Exclui `node_modules/`, `dist/`, `.angular/`, specs e docs do contexto de build |
@@ -105,7 +105,7 @@ Configurações habilitadas:
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API. Se o nome existir no `/etc/hosts` do container (o caso do padrão, via `extra_hosts`), o entrypoint fixa o IP na subida, porque o resolver do nginx não lê esse arquivo |
 | `NGINX_RESOLVER` | lido do `/etc/resolv.conf` | Servidores de DNS usados para re-resolver o `BACKEND_URL`. Definido pelo `docker-entrypoint.sh`; sobrescrever só para apontar a um DNS específico |
 | `APP_PORT` | `4200` | Porta exposta no host |
 
