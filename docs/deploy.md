@@ -105,7 +105,8 @@ Configurações habilitadas:
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API. Se o nome existir no `/etc/hosts` do container (o caso do padrão, via `extra_hosts`), o entrypoint fixa o IP na subida, porque o resolver do nginx não lê esse arquivo |
+| `BACKEND_URL` | `http://host.docker.internal:8080` | URL do backend Cartola Odds API |
+| `BACKEND_URL_FROM_ETC_HOSTS` | desligado | Deixa o entrypoint fixar, na subida, o IP de um `BACKEND_URL` cujo nome só exista no `/etc/hosts` — o `host.docker.internal` do desenvolvimento, que o resolver do nginx não enxerga. O `docker-compose.yml` liga. **Não definir em produção**: lá o nome precisa ser re-resolvido a cada requisição, já que o backend troca de IP a cada deploy |
 | `NGINX_RESOLVER` | lido do `/etc/resolv.conf` | Servidores de DNS usados para re-resolver o `BACKEND_URL`. Definido pelo `docker-entrypoint.sh`; sobrescrever só para apontar a um DNS específico |
 | `APP_PORT` | `4200` | Porta exposta no host |
 
@@ -134,6 +135,7 @@ docker build -t cartola-odds-frontend:1.0.0 .
 docker run -p 4200:80 \
   --add-host=host.docker.internal:host-gateway \
   -e BACKEND_URL=http://host.docker.internal:8080 \
+  -e BACKEND_URL_FROM_ETC_HOSTS=1 \
   cartola-odds-frontend:1.0.0
 ```
 

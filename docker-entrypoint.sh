@@ -42,13 +42,28 @@ export NGINX_RESOLVER
 # `extra_hosts` do compose no Linux — e todo /api/ responderia 502
 # "could not be resolved (3: Host not found)".
 #
-# A saída é fixar o IP na URL quando, e somente quando, o nome vier do
-# /etc/hosts. Não reabre o problema que este entrypoint existe para resolver:
-# uma entrada de /etc/hosts é estática pela vida do container, então não há o
-# que reconsultar. O cache que precisava ser evitado é o do DNS da plataforma,
-# onde o backend troca de IP a cada deploy — e esse caminho segue intocado,
-# re-resolvido a cada `valid=10s`.
+# A saída é fixar o IP na URL quando o nome vier do /etc/hosts. Para uma
+# entrada de /etc/hosts isso é correto: ela é estática pela vida do container,
+# não há o que reconsultar.
+#
+# Mas o comportamento é OPT-IN, desligado por omissão, e a razão é produção.
+# Fixar IP na subida é precisamente o defeito que este entrypoint existe para
+# corrigir; aqui ele só é aceitável porque a entrada é estática. Se a
+# plataforma de produção puser o hostname do backend no /etc/hosts do
+# container — coisa que não se controla daqui —, um padrão "ligado" fixaria
+# aquele IP e o backend voltaria a ficar inalcançável no deploy seguinte, com
+# o mesmo 504 silencioso de antes.
+#
+# Então quem liga é quem sabe que precisa: o docker-compose.yml do
+# desenvolvimento, onde o `extra_hosts` põe host.docker.internal no
+# /etc/hosts. Produção não define a variável e nunca fixa nada — o destino
+# segue sendo re-resolvido a cada `valid=10s`, sem depender de premissa
+# nenhuma sobre o /etc/hosts de lá.
 fixa_host_do_etc_hosts() {
+    case "${BACKEND_URL_FROM_ETC_HOSTS:-}" in
+        1|true|TRUE|yes|YES) ;;
+        *) return 0 ;;
+    esac
     [ -n "${BACKEND_URL:-}" ] || return 0
 
     _resto=${BACKEND_URL#*://}
@@ -82,7 +97,7 @@ fixa_host_do_etc_hosts() {
 
 fixa_host_do_etc_hosts
 
-echo "entrypoint: BACKEND_URL=${BACKEND_URL:-<não definido>} NGINX_RESOLVER=${NGINX_RESOLVER}" >&2
+echo "entrypoint: BACKEND_URL=${BACKEND_URL:-<não definido>} NGINX_RESOLVER=${NGINX_RESOLVER} BACKEND_URL_FROM_ETC_HOSTS=${BACKEND_URL_FROM_ETC_HOSTS:-off}" >&2
 
 envsubst '${BACKEND_URL} ${NGINX_RESOLVER}' \
     < /etc/nginx/templates/default.conf.template \
