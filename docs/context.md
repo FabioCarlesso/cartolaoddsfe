@@ -274,6 +274,8 @@ A relação de arquivos, variáveis de ambiente e comandos está em
 - **Multi-stage build** — Node não existe na imagem final: ~25 MB de nginx alpine contra ~300 MB, e menos superfície de ataque
 - **Usuário não-root** — o container roda como `appuser`
 - **`envsubst` em runtime** — `BACKEND_URL` é substituído no `nginx.conf.template` na inicialização do container, então trocar de backend não exige rebuild da imagem
+- **`proxy_pass` por variável, com `resolver`** — o destino de `/api/` vai para uma variável (`set $backend`) em vez de ficar escrito direto na diretiva. A diferença não é de estilo: com o hostname literal o nginx resolve o nome uma única vez, no parse da configuração, e guarda aquele IP enquanto o processo viver. Numa plataforma onde o backend ganha IP novo a cada deploy, o frontend continua discando o IP antigo e todo `/api/` morre em 504 `upstream timed out while connecting`, sem log algum do outro lado — e só um restart do frontend limpava, até o deploy seguinte. Com a variável, o nginx consulta o resolver a cada requisição e respeita o `valid=10s`
+- **Resolver descoberto no boot** — o `docker-entrypoint.sh` lê os nameservers do `/etc/resolv.conf` do container e injeta em `NGINX_RESOLVER`. Fixar o IP do DNS no template não serviria: ele muda entre Docker local e rede privada de nuvem. Endereços IPv6 saem entre colchetes, como a diretiva exige
 - **Proxy nginx** — `/api/*` é proxiado para o backend, eliminando CORS em produção (mesmo comportamento do `proxy.conf.json` em dev)
 - **`extra_hosts`** — o container não pode usar `localhost` para atingir o host, porque `localhost` dentro do container é o próprio container. `host.docker.internal` resolve isso: no Docker Desktop (Mac/Windows) funciona automaticamente e no Linux o `docker-compose.yml` já traz `extra_hosts: ["host.docker.internal:host-gateway"]`, que mapeia o nome para o IP do host. Com o backend em `localhost:8080`, o padrão `BACKEND_URL=http://host.docker.internal:8080` funciona em qualquer plataforma, sem configuração extra
 - **Cache de assets e gzip** — JS/CSS/fontes com `Cache-Control: public, immutable, 1y`; compressão para todos os tipos de texto
@@ -284,3 +286,4 @@ A relação de arquivos, variáveis de ambiente e comandos está em
 - Não hardcode a URL do backend na imagem — usar `BACKEND_URL` via variável de ambiente
 - Não expor porta 8080 no container de frontend — nginx escuta na 80 internamente
 - Não editar `nginx.conf.template` sem testar o `envsubst` manualmente
+- Não voltar o `proxy_pass` de `/api/` para o hostname literal — some o `resolver` junto e o IP do backend volta a congelar na subida do container

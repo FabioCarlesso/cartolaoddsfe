@@ -15,11 +15,13 @@ FROM nginx:1.27-alpine AS runtime
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY docker-entrypoint.sh /docker-entrypoint-cartola.sh
 COPY nginx-security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY nginx-api-header-fallback.conf /etc/nginx/conf.d/00-api-header-fallback.conf
 COPY --from=build /app/dist/cartolaoddsfe/browser /usr/share/nginx/html
 
-RUN chown -R appuser:appgroup /usr/share/nginx/html \
+RUN chmod +x /docker-entrypoint-cartola.sh \
+    && chown -R appuser:appgroup /usr/share/nginx/html \
     && chmod -R 755 /usr/share/nginx/html \
     && chown -R appuser:appgroup /var/cache/nginx \
     && chown -R appuser:appgroup /var/log/nginx \
@@ -31,6 +33,6 @@ USER appuser
 
 EXPOSE 80
 
-CMD ["sh", "-c", \
-     "envsubst '${BACKEND_URL}' < /etc/nginx/templates/default.conf.template \
-      > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+# O entrypoint descobre o DNS do container e renderiza o template antes de subir
+# o nginx — ver docker-entrypoint.sh.
+CMD ["/docker-entrypoint-cartola.sh"]
