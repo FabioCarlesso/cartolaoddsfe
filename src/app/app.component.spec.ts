@@ -3,6 +3,7 @@ import { Router, Routes, provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/services/auth.service';
+import { ThemeService } from './core/services/theme.service';
 import { SessaoUsuario } from './core/models/auth.model';
 
 /** Destino qualquer para as navegações que exercitam o layout do shell. */
@@ -19,6 +20,17 @@ const sessao: SessaoUsuario = {
 describe('AppComponent', () => {
   let usuarioAtual: ReturnType<typeof signal<SessaoUsuario | null>>;
   let authService: jasmine.SpyObj<AuthService>;
+  let themeService: jasmine.SpyObj<ThemeService>;
+  let temaEscuro: ReturnType<typeof signal<boolean>>;
+
+  /** O shell só lê o tema e dispara a troca; quem decide e persiste é o `ThemeService`. */
+  function temaFalso(escuro = true): jasmine.SpyObj<ThemeService> {
+    temaEscuro = signal(escuro);
+    return jasmine.createSpyObj<ThemeService>('ThemeService', ['alternar'], {
+      escuro: temaEscuro.asReadonly(),
+      temaAtual: signal(escuro ? 'escuro' : 'claro').asReadonly()
+    } as Partial<ThemeService>);
+  }
 
   /**
    * O shell só decide o layout depois da primeira navegação (ver `layoutFluido`), então toda
@@ -27,7 +39,8 @@ describe('AppComponent', () => {
   async function montar(
     usuario: SessaoUsuario | null,
     rotas: Routes = [{ path: '**', component: RotaFakeComponent }],
-    destino = '/'
+    destino = '/',
+    escuro = true
   ) {
     TestBed.resetTestingModule();
     usuarioAtual = signal<SessaoUsuario | null>(usuario);
@@ -36,10 +49,15 @@ describe('AppComponent', () => {
       autenticado: signal(usuario !== null).asReadonly(),
       perfilAtual: signal(usuario?.perfil ?? null).asReadonly()
     } as Partial<AuthService>);
+    themeService = temaFalso(escuro);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter(rotas), { provide: AuthService, useValue: authService }]
+      providers: [
+        provideRouter(rotas),
+        { provide: AuthService, useValue: authService },
+        { provide: ThemeService, useValue: themeService }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AppComponent);
@@ -107,6 +125,35 @@ describe('AppComponent', () => {
     expect(authService.logout).toHaveBeenCalled();
   });
 
+  // A preferência de tema também vale para quem ainda nem entrou: o botão não depende da sessão.
+  it('should render the theme toggle with and without a session', async () => {
+    const comSessao = await montar(sessao);
+    expect(comSessao.nativeElement.querySelector('.btn-tema')).toBeTruthy();
+
+    const semSessao = await montar(null);
+    expect(semSessao.nativeElement.querySelector('.btn-tema')).toBeTruthy();
+  });
+
+  it('should toggle the theme from the header button', async () => {
+    const fixture = await montar(sessao);
+    fixture.nativeElement.querySelector('.btn-tema').click();
+    expect(themeService.alternar).toHaveBeenCalled();
+  });
+
+  // O botão anuncia o destino da troca, não o tema em que a tela está.
+  it('should announce the theme the button switches to', async () => {
+    const fixture = await montar(sessao);
+    const botao: HTMLElement = fixture.nativeElement.querySelector('.btn-tema');
+    expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema claro');
+    expect(botao.getAttribute('aria-pressed')).toBe('false');
+
+    temaEscuro.set(false);
+    fixture.detectChanges();
+
+    expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema escuro');
+    expect(botao.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('should render router outlet', async () => {
     const fixture = await montar(sessao);
     expect(fixture.nativeElement.querySelector('router-outlet')).toBeTruthy();
@@ -152,7 +199,8 @@ describe('AppComponent', () => {
             autenticado: signal(false).asReadonly(),
             perfilAtual: signal(null).asReadonly()
           } as Partial<AuthService>)
-        }
+        },
+        { provide: ThemeService, useValue: temaFalso() }
       ]
     });
 

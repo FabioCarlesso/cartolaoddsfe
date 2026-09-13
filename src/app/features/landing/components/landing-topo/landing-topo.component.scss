@@ -4,7 +4,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10, 15, 26, 0.92);
+  background: var(--bg-nav);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -58,7 +58,7 @@
 
   &:hover {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--overlay-soft);
   }
 }
 

@@ -375,7 +375,7 @@ const BASE_Y = 118;
       height: 8px;
       border-radius: 9999px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--overlay-medium);
     }
 
     .saldo-fill {

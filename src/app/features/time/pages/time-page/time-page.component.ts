@@ -211,7 +211,7 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
 
       &[data-estrategia="SCORE_MAXIMO"] {
         background: rgba(245, 158, 11, 0.12);
-        color: #fbbf24;
+        color: var(--gold-text);
         border: 1px solid rgba(245, 158, 11, 0.3);
       }
     }
@@ -249,7 +249,7 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
 
     .budget-track {
       height: 8px;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--overlay-medium);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -325,7 +325,7 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
       border-radius: 9999px;
 
       .capitao-label { color: var(--text-muted); }
-      .capitao-name { color: #fbbf24; font-weight: 600; }
+      .capitao-name { color: var(--gold-text); font-weight: 600; }
       .capitao-score { color: var(--text-muted); font-size: 0.8rem; }
     }
 
@@ -387,8 +387,8 @@ const ORCAMENTO_STORAGE_KEY = 'time.orcamento';
         color: var(--text-primary);
         font-family: 'Space Grotesk', sans-serif;
 
-        &.doubt { color: #fbbf24; }
-        &.green { color: #4ade80; }
+        &.doubt { color: var(--gold-text); }
+        &.green { color: var(--green-text); }
       }
 
       .stat-lbl {

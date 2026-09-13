@@ -51,7 +51,7 @@ import { ConsistenciaBadge, getConsistenciaBadge } from '../../utils/consistenci
       outline: none;
 
       &:focus-visible {
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+        box-shadow: 0 0 0 2px var(--focus-ring);
       }
     }
 

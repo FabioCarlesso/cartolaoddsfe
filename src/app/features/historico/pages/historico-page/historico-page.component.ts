@@ -233,9 +233,9 @@ interface EvolucaoPonto {
       border-radius: 9999px;
       font-family: 'Space Grotesk', sans-serif;
 
-      &.delta-verde { background: var(--green-light); color: #4ade80; }
-      &.delta-amarelo { background: var(--gold-light); color: #fbbf24; }
-      &.delta-vermelho { background: var(--red-light); color: #f87171; }
+      &.delta-verde { background: var(--green-light); color: var(--green-text); }
+      &.delta-amarelo { background: var(--gold-light); color: var(--gold-text); }
+      &.delta-vermelho { background: var(--red-light); color: var(--red-text); }
     }
 
     .progress-wrap {
@@ -250,7 +250,7 @@ interface EvolucaoPonto {
       height: 8px;
       border-radius: 9999px;
       overflow: hidden;
-      background: rgba(255,255,255,0.08);
+      background: var(--overlay-medium);
     }
 
     .progress-fill {

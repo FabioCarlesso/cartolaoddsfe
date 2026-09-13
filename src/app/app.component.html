@@ -67,6 +67,24 @@
         <button type="button" class="btn btn-ghost btn-sair" (click)="sair()">Sair</button>
       </div>
     }
+
+    <!--
+      Fica fora do bloco de sessão de propósito: a preferência de tema vale também para quem
+      ainda está no login.
+    -->
+    <button
+      type="button"
+      class="btn btn-ghost btn-tema"
+      (click)="alternarTema()"
+      [attr.aria-label]="temaEscuro() ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'"
+      [attr.aria-pressed]="!temaEscuro()"
+      [title]="temaEscuro() ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'">
+      @if (temaEscuro()) {
+        <span class="tema-icone" aria-hidden="true">&#9728;</span>
+      } @else {
+        <span class="tema-icone" aria-hidden="true">&#127769;</span>
+      }
+    </button>
   </div>
 </nav>
 }

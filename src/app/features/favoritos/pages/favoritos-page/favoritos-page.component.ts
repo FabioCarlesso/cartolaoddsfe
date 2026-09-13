@@ -217,11 +217,11 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
         border: 1px solid rgba(34,197,94,0.25);
 
         .pill-num { color: var(--green-primary); font-weight: 700; font-size: 1rem; }
-        .pill-lbl { color: #4ade80; }
+        .pill-lbl { color: var(--green-text); }
       }
 
       &.gray {
-        background: rgba(255,255,255,0.05);
+        background: var(--overlay-soft);
         border: 1px solid var(--border);
 
         .pill-num { color: var(--text-secondary); font-weight: 700; font-size: 1rem; }
@@ -233,7 +233,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
         border: 1px solid rgba(59,130,246,0.25);
 
         .pill-num { color: var(--blue); font-weight: 700; font-size: 1rem; }
-        .pill-lbl { color: #60a5fa; }
+        .pill-lbl { color: var(--blue-text); }
       }
     }
 
@@ -293,7 +293,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
         font-weight: 700;
         padding: 0.2rem 0.6rem;
         background: var(--green-light);
-        color: #4ade80;
+        color: var(--green-text);
         border: 1px solid rgba(34,197,94,0.25);
         border-radius: 9999px;
       }
@@ -333,7 +333,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       }
 
       &.fav-team {
-        .team-odd { color: #4ade80; }
+        .team-odd { color: var(--green-text); }
       }
 
       &.adv-team {
@@ -362,7 +362,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
         align-items: center;
         gap: 0.1rem;
         padding: 0.3rem 0.5rem;
-        background: rgba(255,255,255,0.05);
+        background: var(--overlay-soft);
         border-radius: 8px;
 
         .empate-val {
@@ -394,7 +394,7 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       height: 6px;
       border-radius: 9999px;
       overflow: hidden;
-      background: rgba(255,255,255,0.08);
+      background: var(--overlay-medium);
 
       .prob-fav {
         background: #22c55e;
@@ -402,7 +402,9 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       }
 
       .prob-emp {
-        background: #94a3b8;
+        /* Cinza neutro nos dois temas: é fatia de barra, não texto — a cor de texto
+           secundária escurece demais no tema claro e a faixa do empate rouba a leitura. */
+        background: var(--text-muted);
       }
 
       .prob-adv {

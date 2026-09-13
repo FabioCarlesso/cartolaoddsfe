@@ -316,7 +316,7 @@ interface PosicaoOption {
     }
 
     .ranking-row {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--overlay-subtle);
       transition: background 0.1s;
 
       td {
@@ -326,7 +326,7 @@ interface PosicaoOption {
       }
 
       &:hover {
-        background: rgba(255, 255, 255, 0.03);
+        background: var(--overlay-subtle);
       }
 
       &.row-doubt {
@@ -376,12 +376,12 @@ interface PosicaoOption {
       font-weight: 700;
       padding: 0 0.4rem;
 
-      &[data-pos="GOL"] { background: rgba(239,68,68,0.18); color: #f87171; }
-      &[data-pos="LAT"] { background: rgba(59,130,246,0.18); color: #60a5fa; }
-      &[data-pos="ZAG"] { background: rgba(139,92,246,0.18); color: #a78bfa; }
-      &[data-pos="MEI"] { background: rgba(34,197,94,0.18); color: #4ade80; }
-      &[data-pos="ATA"] { background: rgba(245,158,11,0.18); color: #fbbf24; }
-      &[data-pos="TEC"] { background: rgba(156,163,175,0.18); color: #9ca3af; }
+      &[data-pos="GOL"] { background: rgba(239,68,68,0.18); color: var(--red-text); }
+      &[data-pos="LAT"] { background: rgba(59,130,246,0.18); color: var(--blue-text); }
+      &[data-pos="ZAG"] { background: rgba(139,92,246,0.18); color: var(--purple-text); }
+      &[data-pos="MEI"] { background: rgba(34,197,94,0.18); color: var(--green-text); }
+      &[data-pos="ATA"] { background: rgba(245,158,11,0.18); color: var(--gold-text); }
+      &[data-pos="TEC"] { background: rgba(156,163,175,0.18); color: var(--text-secondary); }
     }
 
     .score-cell {
@@ -412,7 +412,7 @@ interface PosicaoOption {
 
     .mini-bar {
       height: 3px;
-      background: rgba(255,255,255,0.08);
+      background: var(--overlay-medium);
       border-radius: 9999px;
       overflow: hidden;
       width: 80px;
@@ -424,8 +424,8 @@ interface PosicaoOption {
       }
     }
 
-    .var-pos { color: #4ade80; font-weight: 600; }
-    .var-neg { color: #f87171; font-weight: 600; }
+    .var-pos { color: var(--green-text); font-weight: 600; }
+    .var-neg { color: var(--red-text); font-weight: 600; }
 
     .status-badge {
       display: inline-flex;
@@ -438,13 +438,13 @@ interface PosicaoOption {
 
       &.doubt {
         background: rgba(245,158,11,0.12);
-        color: #fbbf24;
+        color: var(--gold-text);
         border: 1px solid rgba(245,158,11,0.25);
       }
 
       &.ok {
         background: rgba(34,197,94,0.1);
-        color: #4ade80;
+        color: var(--green-text);
         border: 1px solid rgba(34,197,94,0.2);
       }
     }

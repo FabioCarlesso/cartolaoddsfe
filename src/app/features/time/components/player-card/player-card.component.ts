@@ -144,12 +144,12 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
       letter-spacing: 0.04em;
       padding: 0 0.4rem;
 
-      &[data-pos="GOL"] { background: rgba(239,68,68,0.18); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
-      &[data-pos="LAT"] { background: rgba(59,130,246,0.18); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
-      &[data-pos="ZAG"] { background: rgba(139,92,246,0.18); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
-      &[data-pos="MEI"] { background: rgba(34,197,94,0.18); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
-      &[data-pos="ATA"] { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
-      &[data-pos="TEC"] { background: rgba(156,163,175,0.18); color: #9ca3af; border: 1px solid rgba(156,163,175,0.3); }
+      &[data-pos="GOL"] { background: rgba(239,68,68,0.18); color: var(--red-text); border: 1px solid rgba(239,68,68,0.3); }
+      &[data-pos="LAT"] { background: rgba(59,130,246,0.18); color: var(--blue-text); border: 1px solid rgba(59,130,246,0.3); }
+      &[data-pos="ZAG"] { background: rgba(139,92,246,0.18); color: var(--purple-text); border: 1px solid rgba(139,92,246,0.3); }
+      &[data-pos="MEI"] { background: rgba(34,197,94,0.18); color: var(--green-text); border: 1px solid rgba(34,197,94,0.3); }
+      &[data-pos="ATA"] { background: rgba(245,158,11,0.18); color: var(--gold-text); border: 1px solid rgba(245,158,11,0.3); }
+      &[data-pos="TEC"] { background: rgba(156,163,175,0.18); color: var(--text-secondary); border: 1px solid rgba(156,163,175,0.3); }
     }
 
     .card-tags {
@@ -170,19 +170,19 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
 
     .tag-captain {
       background: rgba(245,158,11,0.18);
-      color: #fbbf24;
+      color: var(--gold-text);
       border: 1px solid rgba(245,158,11,0.35);
     }
 
     .tag-luxury {
       background: rgba(139,92,246,0.18);
-      color: #a78bfa;
+      color: var(--purple-text);
       border: 1px solid rgba(139,92,246,0.35);
     }
 
     .tag-doubt {
       background: rgba(245,158,11,0.12);
-      color: #f59e0b;
+      color: var(--gold);
       border: 1px solid rgba(245,158,11,0.25);
     }
 
@@ -225,7 +225,7 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
         color: var(--text-primary);
 
         &.score {
-          color: #4ade80;
+          color: var(--green-text);
           display: inline-flex;
           align-items: center;
           gap: 0.3rem;
@@ -235,7 +235,7 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
 
     .score-track {
       height: 3px;
-      background: rgba(255,255,255,0.08);
+      background: var(--overlay-medium);
       border-radius: 9999px;
       overflow: hidden;
       margin-bottom: 0.35rem;
@@ -253,8 +253,8 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
       font-size: 0.72rem;
       font-weight: 600;
 
-      &.pos { color: #4ade80; }
-      &.neg { color: #f87171; }
+      &.pos { color: var(--green-text); }
+      &.neg { color: var(--red-text); }
     }
 
     .score-context {
@@ -277,7 +277,7 @@ import { ConsistenciaBadgeComponent } from '../../../../shared/components/consis
       gap: 0.3rem;
 
       .sub-label { color: var(--text-muted); }
-      .sub-name { color: #fbbf24; font-weight: 600; }
+      .sub-name { color: var(--gold-text); font-weight: 600; }
     }
   `]
 })

@@ -223,9 +223,9 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
       border-radius: 9999px;
       font-family: 'Space Grotesk', sans-serif;
 
-      &.delta-verde { background: var(--green-light); color: #4ade80; }
-      &.delta-amarelo { background: var(--gold-light); color: #fbbf24; }
-      &.delta-vermelho { background: var(--red-light); color: #f87171; }
+      &.delta-verde { background: var(--green-light); color: var(--green-text); }
+      &.delta-amarelo { background: var(--gold-light); color: var(--gold-text); }
+      &.delta-vermelho { background: var(--red-light); color: var(--red-text); }
     }
 
     .atletas-section { margin-bottom: 2rem; }
@@ -277,9 +277,9 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
     .delta-text {
       font-weight: 700;
 
-      &.delta-verde { color: #4ade80; }
-      &.delta-amarelo { color: #fbbf24; }
-      &.delta-vermelho { color: #f87171; }
+      &.delta-verde { color: var(--green-text); }
+      &.delta-amarelo { color: var(--gold-text); }
+      &.delta-vermelho { color: var(--red-text); }
     }
 
     .legenda {

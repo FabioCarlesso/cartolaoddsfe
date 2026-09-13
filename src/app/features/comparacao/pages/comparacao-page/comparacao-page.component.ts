@@ -451,7 +451,7 @@ const ORCAMENTO_STORAGE_KEY = 'comparacao.orcamento';
       line-height: 1.5;
       margin-bottom: 1rem;
 
-      strong { color: #fbbf24; }
+      strong { color: var(--gold-text); }
     }
 
     .modal-actions {

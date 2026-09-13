@@ -1,5 +1,5 @@
 .navbar {
-  background: rgba(10, 15, 26, 0.95);
+  background: var(--bg-nav);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -62,7 +62,7 @@
 
       &:hover {
         color: var(--text-primary);
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--overlay-soft);
       }
 
       &.active {
@@ -108,6 +108,19 @@
   }
 }
 
+/* O botão de tema é o único item fixo do cabeçalho: aparece com ou sem sessão. */
+.btn-tema {
+  padding: 0.4rem 0.55rem;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+
+  .tema-icone {
+    display: inline-flex;
+  }
+}
+
 .main-content {
   min-height: calc(100vh - 64px - 48px);
 }
@@ -126,13 +139,14 @@
 }
 
 /*
- * Como ADMIN o cabeçalho carrega sete links mais o nome e o "Sair": com o espaçamento e os
- * rótulos cheios ele precisa de ~1120px, e abaixo disso não era a barra que quebrava — a
- * página inteira ganhava scroll horizontal, com o "Sair" fora da tela. A degradação vai em
- * dois passos: primeiro aperta o espaçamento, depois deixa os links só com o ícone, que é o
- * mesmo recurso que o mobile já usava.
+ * Como ADMIN o cabeçalho carrega sete links, o nome, o "Sair" e o botão de tema: com o
+ * espaçamento e os rótulos cheios ele precisa de ~1220px, e abaixo disso não era a barra que
+ * quebrava — a página inteira ganhava scroll horizontal, com o "Sair" fora da tela. A
+ * degradação vai em dois passos: primeiro aperta o espaçamento, depois deixa os links só com o
+ * ícone, que é o mesmo recurso que o mobile já usava. Os dois degraus subiram 100px quando o
+ * botão de tema entrou na barra: item novo, largura nova.
  */
-@media (max-width: 1120px) {
+@media (max-width: 1220px) {
   .navbar .navbar-inner {
     padding: 0 1rem;
   }
@@ -155,7 +169,7 @@
   }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1080px) {
   .navbar .nav-links a span:last-child {
     display: none;
   }
@@ -188,6 +202,10 @@
 
   .nav-user .btn-sair {
     padding: 0.4rem 0.6rem;
+  }
+
+  .btn-tema {
+    padding: 0.4rem 0.45rem;
   }
 }
 

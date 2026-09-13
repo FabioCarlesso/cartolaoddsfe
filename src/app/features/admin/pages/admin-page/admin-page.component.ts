@@ -296,7 +296,7 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
 
     .btn-danger {
       background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
+      color: var(--red-text);
       border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: var(--radius);
       padding: 0.5rem 1rem;
@@ -311,7 +311,7 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
 
     .btn-outline-danger {
       background: transparent;
-      color: #f87171;
+      color: var(--red-text);
       border: 1px solid rgba(239, 68, 68, 0.3);
       border-radius: var(--radius);
       padding: 0.4rem 0.75rem;
@@ -362,7 +362,7 @@ const CACHE_NAMES = ['odds', 'atletas', 'clubes', 'partidas', 'pontuados', 'stat
       border-radius: 6px;
       font-size: 0.75rem;
       background: rgba(99, 102, 241, 0.15);
-      color: #818cf8;
+      color: var(--indigo-text);
       border: 1px solid rgba(99, 102, 241, 0.25);
     }
 

@@ -116,20 +116,45 @@ export const visitanteGuard: CanActivateFn = () =>
 | `forbidden-page` | `/403` | Aviso de acesso restrito, com volta para `/time` |
 | `alterar-senha-page` | `/alterar-senha` | Troca da própria senha; como o backend invalida o token na operação, o fluxo termina em logout — a confirmação aparece na tela de login, porque a navegação acontece no mesmo instante |
 
+### `core/services/theme.service.ts`
+
+Tema visual da aplicação — `'claro'` ou `'escuro'`.
+
+| Membro | Função |
+|---|---|
+| `temaAtual` | Signal somente leitura com o tema em vigor |
+| `escuro` | `computed` que o cabeçalho usa para decidir ícone e rótulo do botão |
+| `alternar()` | Troca o tema e grava a escolha |
+| `definir(tema)` | Fixa um tema específico e grava a escolha |
+
+A escolha vive em `localStorage` (`cartolaodds.tema`) e o serviço escreve o atributo
+`data-theme` no `<html>`, que é o que seleciona a paleta em `src/styles.scss`. Sem escolha
+gravada, o tema segue o `prefers-color-scheme` do sistema — inclusive quando o usuário troca o
+tema do sistema com a aba aberta. Depois do primeiro clique no botão, o sistema deixa de mandar.
+A meta `theme-color` acompanha a troca, para a barra do navegador no celular não ficar escura
+sobre uma tela clara.
+
+O primeiro paint não passa por aqui: um script inline no `index.html` aplica a mesma decisão
+antes de o Angular subir (ver [Design System](./context.md#design-system)).
+
 ### Shell
 
 O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe o nome do usuário
 (atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config", "Cota" e "Usuários" só
 aparecem para o perfil `ADMIN`.
 
+O botão de tema (`.btn-tema`) fica fora do bloco de sessão: aparece com ou sem login — a
+preferência vale também para quem está na tela de entrada. Ele anuncia o destino da troca, não o
+tema atual: no escuro mostra o sol e diz "Mudar para o tema claro".
+
 Rotas marcadas com `data: { layoutFluido: true }` — hoje só a landing — trazem o próprio
 cabeçalho e o próprio rodapé, e o shell esconde os seus. O `AppComponent` acompanha o dado da
 rota mais profunda a cada `NavigationEnd` (`layoutFluido`, um `toSignal` sobre `router.events`),
 em vez de comparar a URL: uma nova rota fluida só precisa declarar o `data`.
 
-Como ADMIN o cabeçalho carrega sete links mais o nome e o **Sair**, e por isso degrada em
-etapas: até 1120px aperta o espaçamento, até 1000px deixa os links só com o ícone, até 640px
-esconde também o nome do usuário e, até 480px, o texto da marca (ver
+Como ADMIN o cabeçalho carrega sete links, o nome, o **Sair** e o botão de tema, e por isso
+degrada em etapas: até 1220px aperta o espaçamento, até 1080px deixa os links só com o ícone, até
+640px esconde também o nome do usuário e, até 480px, o texto da marca (ver
 [Design System](./context.md#design-system)).
 
 ---
