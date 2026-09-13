@@ -26,6 +26,19 @@ export class ThemeService {
   private readonly document = inject(DOCUMENT);
   private readonly navegador = isPlatformBrowser(inject(PLATFORM_ID));
 
+  /**
+   * Guardada num campo, e não consultada a cada uso: um `MediaQueryList` sem referência viva
+   * pode ser coletado, e o ouvinte da troca de tema do sistema morre junto com ele.
+   */
+  private readonly consultaTemaClaro = this.criarConsultaDeTemaClaro();
+
+  /**
+   * O usuário já escolheu um tema — nesta sessão ou numa anterior. Não dá para perguntar isso
+   * só ao `localStorage`: com o storage bloqueado a escolha não tem onde ser gravada, e a
+   * primeira troca de tema do sistema desfaria o que o usuário acabou de pedir.
+   */
+  private escolhaManual = false;
+
   private readonly tema = signal<Tema>('escuro');
 
   readonly temaAtual = this.tema.asReadonly();
@@ -44,6 +57,7 @@ export class ThemeService {
 
   definir(tema: Tema): void {
     gravarEscolha(tema);
+    this.escolhaManual = true;
     this.tema.set(tema);
     this.aplicar(tema);
   }
@@ -55,29 +69,32 @@ export class ThemeService {
       return 'escuro';
     }
 
-    return lerEscolha() ?? this.temaDoSistema();
+    const escolha = lerEscolha();
+    this.escolhaManual = escolha !== null;
+    return escolha ?? this.temaDoSistema();
   }
 
   private temaDoSistema(): Tema {
-    return this.consultaDeTemaClaro()?.matches ? 'claro' : 'escuro';
+    return this.consultaTemaClaro?.matches ? 'claro' : 'escuro';
   }
 
-  private consultaDeTemaClaro(): MediaQueryList | null {
+  private criarConsultaDeTemaClaro(): MediaQueryList | null {
     const janela = this.document.defaultView;
     return janela?.matchMedia ? janela.matchMedia('(prefers-color-scheme: light)') : null;
   }
 
   /**
-   * Troca de tema no sistema operacional só move a aplicação enquanto não houver escolha
-   * manual gravada: quem clicou no botão pediu um tema, não "o tema do sistema".
+   * Troca de tema no sistema operacional só move a aplicação enquanto o usuário não tiver
+   * escolhido: quem clicou no botão pediu um tema, não "o tema do sistema" — e isso vale
+   * mesmo quando a escolha não pôde ser gravada.
    */
   private acompanharSistema(): void {
     if (!this.navegador) {
       return;
     }
 
-    this.consultaDeTemaClaro()?.addEventListener('change', (evento) => {
-      if (lerEscolha() === null) {
+    this.consultaTemaClaro?.addEventListener('change', (evento) => {
+      if (!this.escolhaManual) {
         this.tema.set(evento.matches ? 'claro' : 'escuro');
         this.aplicar(this.tema());
       }

@@ -187,9 +187,10 @@ classes utilitárias globais e a tipografia estão em
   destaque pura: o tom que se lê sobre `#0a0f1a` some sobre branco
 - Componentes podem ter estilos encapsulados (`:host` + component styles)
 - Responsivo: mobile-first implícito, breakpoints em `640px` e `1024px`
-- O cabeçalho degrada em etapas (1220px, 1080px, 640px, 480px) porque, como ADMIN, ele carrega
-  sete links, o nome, o **Sair** e o botão de tema; sem isso a página ganhava scroll horizontal e
-  o **Sair** saía da tela
+- O cabeçalho usa espaçamento apertado em qualquer largura e ainda degrada em etapas (1220px,
+  1150px, 640px, 480px) porque, como ADMIN, ele carrega sete links, o nome, o **Sair** e o botão
+  de tema numa barra que para de crescer em 1200px; sem isso a marca quebrava em duas linhas e a
+  página ganhava scroll horizontal, com o **Sair** fora da tela
 
 ### Tema claro e escuro
 

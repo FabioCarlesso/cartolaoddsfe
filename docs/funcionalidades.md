@@ -152,10 +152,11 @@ cabeçalho e o próprio rodapé, e o shell esconde os seus. O `AppComponent` aco
 rota mais profunda a cada `NavigationEnd` (`layoutFluido`, um `toSignal` sobre `router.events`),
 em vez de comparar a URL: uma nova rota fluida só precisa declarar o `data`.
 
-Como ADMIN o cabeçalho carrega sete links, o nome, o **Sair** e o botão de tema, e por isso
-degrada em etapas: até 1220px aperta o espaçamento, até 1080px deixa os links só com o ícone, até
-640px esconde também o nome do usuário e, até 480px, o texto da marca (ver
-[Design System](./context.md#design-system)).
+Como ADMIN o cabeçalho carrega sete links, o nome, o **Sair** e o botão de tema, e a barra não
+cresce com a tela — o `.navbar-inner` para em 1200px. Por isso o espaçamento entre os links é
+apertado em qualquer largura — assim como o limite de 130px no nome do usuário, que passa dali
+em reticências —, e a degradação segue em etapas: até 1220px some a folga lateral, até 1150px os
+links ficam só com o ícone, até 640px o nome do usuário some e, até 480px, o texto da marca (ver [Design System](./context.md#design-system)).
 
 ---
 

@@ -122,6 +122,23 @@ describe('ThemeService', () => {
     expect(servico.temaAtual()).toBe('escuro');
   });
 
+  /*
+   * Com o storage bloqueado a escolha não tem onde ser gravada — mas ela continua valendo
+   * enquanto a página viver. Sem essa marca em memória, a primeira troca de tema no sistema
+   * desfazia o que o usuário tinha acabado de pedir no botão.
+   */
+  it('should honour a manual choice that could not be stored', () => {
+    spyOn(Storage.prototype, 'setItem').and.throwError('storage bloqueado');
+
+    const servico = criar({ sistemaClaro: false });
+    servico.definir('escuro');
+
+    consulta.emitir(true);
+
+    expect(servico.temaAtual()).toBe('escuro');
+    expect(html.getAttribute('data-theme')).toBe('escuro');
+  });
+
   // Navegador em modo privado ou com storage de site bloqueado lança já na leitura: sem
   // persistência o tema apenas volta a seguir o sistema, e nada pode quebrar por isso.
   it('should survive a blocked storage', () => {

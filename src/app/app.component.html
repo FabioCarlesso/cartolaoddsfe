@@ -77,7 +77,6 @@
       class="btn btn-ghost btn-tema"
       (click)="alternarTema()"
       [attr.aria-label]="temaEscuro() ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'"
-      [attr.aria-pressed]="!temaEscuro()"
       [title]="temaEscuro() ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'">
       @if (temaEscuro()) {
         <span class="tema-icone" aria-hidden="true">&#9728;</span>

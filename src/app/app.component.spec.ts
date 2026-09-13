@@ -140,18 +140,21 @@ describe('AppComponent', () => {
     expect(themeService.alternar).toHaveBeenCalled();
   });
 
-  // O botão anuncia o destino da troca, não o tema em que a tela está.
+  /*
+   * O botão anuncia o destino da troca, não o tema em que a tela está — e sem `aria-pressed`
+   * junto: nome que muda mais estado pressionado deixa o leitor de tela dizendo "mudar para o
+   * tema escuro… pressionado", que descreve dois sentidos opostos ao mesmo tempo.
+   */
   it('should announce the theme the button switches to', async () => {
     const fixture = await montar(sessao);
     const botao: HTMLElement = fixture.nativeElement.querySelector('.btn-tema');
     expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema claro');
-    expect(botao.getAttribute('aria-pressed')).toBe('false');
+    expect(botao.hasAttribute('aria-pressed')).toBeFalse();
 
     temaEscuro.set(false);
     fixture.detectChanges();
 
     expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema escuro');
-    expect(botao.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('should render router outlet', async () => {
