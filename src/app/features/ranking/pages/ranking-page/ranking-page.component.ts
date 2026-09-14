@@ -309,7 +309,7 @@ interface PosicaoOption {
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: var(--text-muted);
-        background: rgba(0, 0, 0, 0.2);
+        background: var(--bg-secondary);
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
       }

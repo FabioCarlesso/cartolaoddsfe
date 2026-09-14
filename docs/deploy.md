@@ -47,6 +47,22 @@ A separação evita um efeito colateral do prerender, descrito em
 O `provideClientHydration()` no `app.config.ts` faz o Angular reaproveitar o HTML pré-renderizado
 em vez de descartá-lo e desenhar tudo de novo.
 
+A configuração `production` desliga o inline de CSS crítico:
+
+```jsonc
+// angular.json → architect.build.configurations.production
+"optimization": {
+  "scripts": true,
+  "styles": { "minify": true, "inlineCritical": false },
+  "fonts": true
+}
+```
+
+Com o padrão ligado, o build copia para o `<head>` só as regras globais que casam com o HTML
+pré-renderizado e carrega o `styles.css` de forma assíncrona. A paleta do tema claro nunca entra
+nesse recorte, e a landing pintava escura antes de trocar — o porquê está em
+[Tema claro e escuro](./context.md#tema-claro-e-escuro).
+
 ### URL do backend em produção
 
 Não há `environment.ts` — a URL do backend é definida diretamente nos serviços como `/api` e resolvida pelo proxy em dev ou pelo servidor web em produção.
