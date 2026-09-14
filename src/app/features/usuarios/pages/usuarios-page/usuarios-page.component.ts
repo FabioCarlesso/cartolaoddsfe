@@ -205,7 +205,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
       font-weight: 700;
       text-transform: uppercase;
       background: var(--blue-light);
-      color: #93c5fd;
+      color: var(--blue-text);
     }
 
     .chip {
@@ -222,17 +222,17 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 
       &.admin {
         background: rgba(139, 92, 246, 0.15);
-        color: #c4b5fd;
+        color: var(--purple-text);
       }
     }
 
     .chip-situacao {
       background: var(--red-light);
-      color: #f87171;
+      color: var(--red-text);
 
       &.ativo {
         background: var(--green-light);
-        color: #4ade80;
+        color: var(--green-text);
       }
     }
 
@@ -243,7 +243,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 
     .btn-desativar {
       margin-left: 0.4rem;
-      color: #f87171;
+      color: var(--red-text);
       border-color: rgba(239, 68, 68, 0.3);
 
       &:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); }

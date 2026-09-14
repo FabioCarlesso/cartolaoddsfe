@@ -67,6 +67,12 @@
         <button type="button" class="btn btn-ghost btn-sair" (click)="sair()">Sair</button>
       </div>
     }
+
+    <!--
+      Fica fora do bloco de sessão de propósito: a preferência de tema vale também para quem
+      ainda está no login.
+    -->
+    <app-tema-toggle />
   </div>
 </nav>
 }

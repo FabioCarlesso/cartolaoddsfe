@@ -33,25 +33,25 @@ export type AlertType = 'warning' | 'error' | 'info' | 'success';
     .alert-warning {
       background: rgba(245, 158, 11, 0.08);
       border: 1px solid rgba(245, 158, 11, 0.25);
-      color: #fbbf24;
+      color: var(--gold-text);
     }
 
     .alert-error {
       background: rgba(239, 68, 68, 0.08);
       border: 1px solid rgba(239, 68, 68, 0.25);
-      color: #f87171;
+      color: var(--red-text);
     }
 
     .alert-info {
       background: rgba(59, 130, 246, 0.08);
       border: 1px solid rgba(59, 130, 246, 0.25);
-      color: #60a5fa;
+      color: var(--blue-text);
     }
 
     .alert-success {
       background: rgba(34, 197, 94, 0.08);
       border: 1px solid rgba(34, 197, 94, 0.25);
-      color: #4ade80;
+      color: var(--green-text);
     }
   `]
 })

@@ -30,6 +30,33 @@
   <meta name="twitter:image" content="assets/landing/og.png">
 
   <meta name="theme-color" content="#0a0f1a">
+
+  <!--
+    Tema aplicado antes do primeiro paint. O `ThemeService` toma a mesma decisão em signal, mas
+    só depois de o Angular subir — e a landing ainda chega pré-renderizada, sem atributo nenhum
+    no `<html>`. Sem este script, quem escolheu o tema claro (ou usa o sistema em claro) veria a
+    tela escura piscar antes da troca. A chave e os valores são os do `theme.service.ts`.
+  -->
+  <script>
+    (function () {
+      var escolha = null;
+      try {
+        escolha = localStorage.getItem('cartolaodds.tema');
+      } catch (e) {
+        /* storage bloqueado: cai no tema do sistema */
+      }
+
+      var claroNoSistema =
+        window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      var tema = escolha === 'claro' || escolha === 'escuro' ? escolha : claroNoSistema ? 'claro' : 'escuro';
+
+      document.documentElement.setAttribute('data-theme', tema);
+      var cor = document.querySelector('meta[name="theme-color"]');
+      if (cor) {
+        cor.setAttribute('content', tema === 'claro' ? '#f1f5f9' : '#0a0f1a');
+      }
+    })();
+  </script>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

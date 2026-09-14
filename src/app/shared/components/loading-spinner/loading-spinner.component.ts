@@ -52,7 +52,7 @@ import { Component, Input } from '@angular/core';
     }
 
     .spinner-message {
-      color: #94a3b8;
+      color: var(--text-secondary);
       font-size: 0.9rem;
       font-weight: 500;
     }

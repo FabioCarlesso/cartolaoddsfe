@@ -3,6 +3,7 @@ import { Router, Routes, provideRouter } from '@angular/router';
 import { Component, signal } from '@angular/core';
 import { AppComponent } from './app.component';
 import { AuthService } from './core/services/auth.service';
+import { ThemeService } from './core/services/theme.service';
 import { SessaoUsuario } from './core/models/auth.model';
 
 /** Destino qualquer para as navegações que exercitam o layout do shell. */
@@ -20,6 +21,14 @@ describe('AppComponent', () => {
   let usuarioAtual: ReturnType<typeof signal<SessaoUsuario | null>>;
   let authService: jasmine.SpyObj<AuthService>;
 
+  /** O botão de tema do shell só lê o tema e dispara a troca; quem decide é o `ThemeService`. */
+  function temaFalso(escuro = true): jasmine.SpyObj<ThemeService> {
+    return jasmine.createSpyObj<ThemeService>('ThemeService', ['alternar'], {
+      escuro: signal(escuro).asReadonly(),
+      temaAtual: signal(escuro ? 'escuro' : 'claro').asReadonly()
+    } as Partial<ThemeService>);
+  }
+
   /**
    * O shell só decide o layout depois da primeira navegação (ver `layoutFluido`), então toda
    * montagem navega para uma rota antes de olhar para o cabeçalho e o rodapé.
@@ -27,7 +36,8 @@ describe('AppComponent', () => {
   async function montar(
     usuario: SessaoUsuario | null,
     rotas: Routes = [{ path: '**', component: RotaFakeComponent }],
-    destino = '/'
+    destino = '/',
+    escuro = true
   ) {
     TestBed.resetTestingModule();
     usuarioAtual = signal<SessaoUsuario | null>(usuario);
@@ -39,7 +49,11 @@ describe('AppComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
-      providers: [provideRouter(rotas), { provide: AuthService, useValue: authService }]
+      providers: [
+        provideRouter(rotas),
+        { provide: AuthService, useValue: authService },
+        { provide: ThemeService, useValue: temaFalso(escuro) }
+      ]
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AppComponent);
@@ -107,6 +121,15 @@ describe('AppComponent', () => {
     expect(authService.logout).toHaveBeenCalled();
   });
 
+  // A preferência de tema também vale para quem ainda nem entrou: o botão não depende da sessão.
+  it('should render the theme toggle with and without a session', async () => {
+    const comSessao = await montar(sessao);
+    expect(comSessao.nativeElement.querySelector('.btn-tema')).toBeTruthy();
+
+    const semSessao = await montar(null);
+    expect(semSessao.nativeElement.querySelector('.btn-tema')).toBeTruthy();
+  });
+
   it('should render router outlet', async () => {
     const fixture = await montar(sessao);
     expect(fixture.nativeElement.querySelector('router-outlet')).toBeTruthy();
@@ -152,7 +175,8 @@ describe('AppComponent', () => {
             autenticado: signal(false).asReadonly(),
             perfilAtual: signal(null).asReadonly()
           } as Partial<AuthService>)
-        }
+        },
+        { provide: ThemeService, useValue: temaFalso() }
       ]
     });
 

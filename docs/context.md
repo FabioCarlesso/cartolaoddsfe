@@ -177,16 +177,50 @@ e foi descartado pelo custo frente ao perfil de uso — aplicação pessoal, sem
 ## Design System
 
 Tema escuro football inspirado em campo de futebol, definido em `src/styles.scss` via CSS custom
-properties. A paleta completa, as classes utilitárias globais e a tipografia estão em
+properties — e, desde a #27, um tema claro equivalente. A paleta completa nos dois temas, as
+classes utilitárias globais e a tipografia estão em
 [`design-system.md`](./design-system.md).
 
 **Regras:**
 - Nunca hardcode de cores nos componentes — sempre usar variáveis CSS (`var(--green-primary)`)
+- Cor que é **texto** usa o par `--*-text` (`--green-text`, `--gold-text`, …), não a cor de
+  destaque pura: o tom que se lê sobre `#0a0f1a` some sobre branco
 - Componentes podem ter estilos encapsulados (`:host` + component styles)
 - Responsivo: mobile-first implícito, breakpoints em `640px` e `1024px`
-- O cabeçalho degrada em etapas (1120px, 1000px, 640px, 480px) porque, como ADMIN, ele carrega
-  sete links mais o nome e o **Sair**; sem isso a página ganhava scroll horizontal e o **Sair**
-  saía da tela
+- O cabeçalho usa espaçamento apertado em qualquer largura e ainda degrada em etapas (1220px,
+  1150px, 640px, 480px) porque, como ADMIN, ele carrega sete links, o nome, o **Sair** e o botão
+  de tema numa barra que para de crescer em 1200px; sem isso a marca quebrava em duas linhas e a
+  página ganhava scroll horizontal, com o **Sair** fora da tela
+
+### Tema claro e escuro
+
+A paleta de cada tema é um mixin SCSS aplicado em dois seletores: `:root[data-theme='claro']`,
+para a escolha explícita, e `@media (prefers-color-scheme: light)` sobre
+`:root:not([data-theme='escuro'])`, para quem nunca escolheu. O escuro segue no `:root` puro, de
+modo que nada muda para quem já usava o produto num sistema em escuro.
+
+Quem escreve o atributo é o [`ThemeService`](./funcionalidades.md#coreservicesthemeservicets),
+com a escolha em `localStorage` — mas **não** é ele quem pinta a primeira tela. Um script inline
+no `index.html` aplica a mesma decisão antes do primeiro paint, porque o serviço só existe depois
+do bootstrap e a landing ainda chega pronta do prerender: sem ele, quem prefere o claro veria a
+tela escura piscar. É a única duplicação deliberada de lógica do repositório — mudar a chave ou
+os valores exige mudar os dois lados, e ambos dizem isso em comentário.
+
+O script só resolve o flash se as regras do tema claro já estiverem carregadas no primeiro paint.
+Por isso o build de produção roda com `inlineCritical: false` (ver
+[`deploy.md`](./deploy.md#prerender-da-landing-ssg)): com o inline de CSS crítico ligado, o
+recorte copiado para o `<head>` vem do HTML pré-renderizado, que não tem `data-theme` — sai só a
+paleta escura do `:root`, e o `styles.css` com `:root[data-theme='claro']` chegava depois, de
+forma assíncrona. O `ng serve` não faz esse inline, então o flash só aparecia no build. O custo é
+o `styles.css` global (poucos kB) virar bloqueante de render; os estilos dos componentes da
+landing continuam inline no HTML.
+
+Sem escolha manual gravada, o sistema continua mandando enquanto a aba vive: o serviço ouve a
+troca de `prefers-color-scheme`. Depois do primeiro clique no botão, para de ouvir — quem clicou
+pediu um tema, não "o tema do sistema".
+
+O gramado do `TeamViewComponent` é a exceção que continua escura nos dois temas: é um campo de
+futebol, e os véus brancos dele são sobre o gramado, não sobre o fundo da página.
 
 ---
 

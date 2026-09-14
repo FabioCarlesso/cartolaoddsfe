@@ -3,10 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from './core/services/auth.service';
+import { TemaToggleComponent } from './shared/components/tema-toggle/tema-toggle.component';
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, TemaToggleComponent],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })

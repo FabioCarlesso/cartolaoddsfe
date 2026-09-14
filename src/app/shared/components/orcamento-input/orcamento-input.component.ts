@@ -116,7 +116,7 @@ import { FormsModule } from '@angular/forms';
       border-radius: 9999px;
       border: none;
       background: rgba(239, 68, 68, 0.12);
-      color: #f87171;
+      color: var(--red-text);
       cursor: pointer;
       font-size: 0.7rem;
       line-height: 1;
@@ -127,7 +127,7 @@ import { FormsModule } from '@angular/forms';
 
     .field-error {
       font-size: 0.75rem;
-      color: #f87171;
+      color: var(--red-text);
     }
 
     @media (max-width: 640px) {
