@@ -20,14 +20,11 @@ const sessao: SessaoUsuario = {
 describe('AppComponent', () => {
   let usuarioAtual: ReturnType<typeof signal<SessaoUsuario | null>>;
   let authService: jasmine.SpyObj<AuthService>;
-  let themeService: jasmine.SpyObj<ThemeService>;
-  let temaEscuro: ReturnType<typeof signal<boolean>>;
 
-  /** O shell só lê o tema e dispara a troca; quem decide e persiste é o `ThemeService`. */
+  /** O botão de tema do shell só lê o tema e dispara a troca; quem decide é o `ThemeService`. */
   function temaFalso(escuro = true): jasmine.SpyObj<ThemeService> {
-    temaEscuro = signal(escuro);
     return jasmine.createSpyObj<ThemeService>('ThemeService', ['alternar'], {
-      escuro: temaEscuro.asReadonly(),
+      escuro: signal(escuro).asReadonly(),
       temaAtual: signal(escuro ? 'escuro' : 'claro').asReadonly()
     } as Partial<ThemeService>);
   }
@@ -49,14 +46,13 @@ describe('AppComponent', () => {
       autenticado: signal(usuario !== null).asReadonly(),
       perfilAtual: signal(usuario?.perfil ?? null).asReadonly()
     } as Partial<AuthService>);
-    themeService = temaFalso(escuro);
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
         provideRouter(rotas),
         { provide: AuthService, useValue: authService },
-        { provide: ThemeService, useValue: themeService }
+        { provide: ThemeService, useValue: temaFalso(escuro) }
       ]
     }).compileComponents();
 
@@ -132,29 +128,6 @@ describe('AppComponent', () => {
 
     const semSessao = await montar(null);
     expect(semSessao.nativeElement.querySelector('.btn-tema')).toBeTruthy();
-  });
-
-  it('should toggle the theme from the header button', async () => {
-    const fixture = await montar(sessao);
-    fixture.nativeElement.querySelector('.btn-tema').click();
-    expect(themeService.alternar).toHaveBeenCalled();
-  });
-
-  /*
-   * O botão anuncia o destino da troca, não o tema em que a tela está — e sem `aria-pressed`
-   * junto: nome que muda mais estado pressionado deixa o leitor de tela dizendo "mudar para o
-   * tema escuro… pressionado", que descreve dois sentidos opostos ao mesmo tempo.
-   */
-  it('should announce the theme the button switches to', async () => {
-    const fixture = await montar(sessao);
-    const botao: HTMLElement = fixture.nativeElement.querySelector('.btn-tema');
-    expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema claro');
-    expect(botao.hasAttribute('aria-pressed')).toBeFalse();
-
-    temaEscuro.set(false);
-    fixture.detectChanges();
-
-    expect(botao.getAttribute('aria-label')).toBe('Mudar para o tema escuro');
   });
 
   it('should render router outlet', async () => {

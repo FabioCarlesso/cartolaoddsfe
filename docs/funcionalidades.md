@@ -143,9 +143,8 @@ O `AppComponent` esconde a navegação inteira sem sessão e, com sessão, exibe
 (atalho para `/alterar-senha`) e o botão **Sair**. Os itens "Config", "Cota" e "Usuários" só
 aparecem para o perfil `ADMIN`.
 
-O botão de tema (`.btn-tema`) fica fora do bloco de sessão: aparece com ou sem login — a
-preferência vale também para quem está na tela de entrada. Ele anuncia o destino da troca, não o
-tema atual: no escuro mostra o sol e diz "Mudar para o tema claro".
+O botão de tema ([`TemaToggleComponent`](#tematogglecomponent)) fica fora do bloco de sessão:
+aparece com ou sem login — a preferência vale também para quem está na tela de entrada.
 
 Rotas marcadas com `data: { layoutFluido: true }` — hoje só a landing — trazem o próprio
 cabeçalho e o próprio rodapé, e o shell esconde os seus. O `AppComponent` acompanha o dado da
@@ -450,6 +449,22 @@ O tooltip (`Desvio padrão: X` + `Baseado nas últimas N rodadas`) abre ao passa
 mouse (desktop) e ao tocar/clicar (mobile), fechando ao clicar fora ou perder o foco.
 Usado nas telas de **Ranking** (inline na célula de score) e **Time** (ao lado do
 score em cada `PlayerCardComponent`, cobrindo titulares e reservas).
+
+### `TemaToggleComponent`
+
+Seletor: `app-tema-toggle`
+
+Botão que alterna entre o tema claro e o escuro pelo
+[`ThemeService`](#coreservicesthemeservicets). Aparece no cabeçalho do sistema (`AppComponent`) e
+no topo da landing. Sem inputs.
+
+- Anuncia o destino da troca, não o tema atual: no escuro mostra o sol e diz "Mudar para o tema
+  claro". Não usa `aria-pressed` — o nome já muda com o estado.
+- Os dois ícones ficam no DOM e o CSS escolhe qual aparece pelo `data-theme` do `<html>` (via
+  `:host-context`). A landing chega do prerender com o HTML do tema escuro, e o script de boot
+  marca o tema antes da hidratação: com `@if` o ícone ficaria errado até o Angular subir.
+- O respiro interno vem de `--tema-toggle-padding`, que o cabeçalho do sistema aperta nos degraus
+  de 640px e 480px sem furar o encapsulamento.
 
 ### `OrcamentoInputComponent`
 
@@ -909,7 +924,7 @@ A página é uma sequência de faixas, nesta ordem:
 
 | Faixa | Conteúdo |
 |---|---|
-| Topo | Barra pública: marca, "Como funciona", "Entrar" |
+| Topo | Barra pública: marca, "Como funciona", "Entrar" e o botão de tema |
 | Hero | Proposta de valor e CTAs (login e GitHub) |
 | Como funciona | Pipeline em 4 passos (âncora `#como-funciona`) |
 | Funcionalidades | Cards das capacidades reais do sistema |

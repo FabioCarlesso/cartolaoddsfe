@@ -73,6 +73,11 @@
     display: none;
   }
 
+  // Em 320px a marca, o "Entrar" e o botão de tema só cabem com o respiro entre eles apertado.
+  .topo__acoes {
+    gap: 0.375rem;
+  }
+
   .topo__marca .topo__nome {
     font-size: 1.05rem;
   }

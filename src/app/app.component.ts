@@ -3,23 +3,21 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService } from './core/services/auth.service';
-import { ThemeService } from './core/services/theme.service';
+import { TemaToggleComponent } from './shared/components/tema-toggle/tema-toggle.component';
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    imports: [RouterOutlet, RouterLink, RouterLinkActive, TemaToggleComponent],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })
 export class AppComponent {
   private authService = inject(AuthService);
-  private themeService = inject(ThemeService);
   private router = inject(Router);
 
   readonly autenticado = this.authService.autenticado;
   readonly usuario = this.authService.usuarioAtual;
   readonly admin = computed(() => this.authService.perfilAtual() === 'ADMIN');
-  readonly temaEscuro = this.themeService.escuro;
 
   /**
    * Rotas marcadas com `layoutFluido` trazem o próprio cabeçalho e rodapé — hoje só a landing
@@ -41,10 +39,6 @@ export class AppComponent {
 
   sair(): void {
     this.authService.logout();
-  }
-
-  alternarTema(): void {
-    this.themeService.alternar();
   }
 
   private rotaAtiva(): ActivatedRoute {

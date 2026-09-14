@@ -58,9 +58,10 @@ de badge, e `--shadow`/`--shadow-lg` são mais discretas no tema claro.
 
 ## Controle de tema
 
-O cabeçalho (`AppComponent`) traz o botão `.btn-tema`, visível com ou sem sessão. Ele alterna
-entre os dois temas pelo `ThemeService`, que persiste a escolha e aplica o atributo — o
-comportamento completo está em
+O botão de tema é o componente compartilhado `app-tema-toggle`, presente no cabeçalho do sistema
+(visível com ou sem sessão) e no topo da landing. Ele alterna entre os dois temas pelo
+`ThemeService`, que persiste a escolha e aplica o atributo — o comportamento completo está em
+[`TemaToggleComponent`](funcionalidades.md#tematogglecomponent) e
 [`ThemeService`](funcionalidades.md#coreservicesthemeservicets).
 
 ## Tipografia

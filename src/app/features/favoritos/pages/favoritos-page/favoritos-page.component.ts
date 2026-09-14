@@ -373,7 +373,9 @@ import { AlertBannerComponent } from '../../../../shared/components/alert-banner
 
         .empate-label {
           font-size: 0.6rem;
-          color: var(--text-muted);
+          /* --text-muted não chega a 3:1 sobre o véu do bloco, e o rótulo aqui é ainda menor
+             que o das odds ao lado. */
+          color: var(--text-secondary);
           text-transform: uppercase;
         }
       }

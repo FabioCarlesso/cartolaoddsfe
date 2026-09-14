@@ -116,19 +116,6 @@
   }
 }
 
-/* O botão de tema é o único item fixo do cabeçalho: aparece com ou sem sessão. */
-.btn-tema {
-  padding: 0.4rem 0.55rem;
-  font-size: 1rem;
-  line-height: 1;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-
-  .tema-icone {
-    display: inline-flex;
-  }
-}
-
 .main-content {
   min-height: calc(100vh - 64px - 48px);
 }
@@ -194,8 +181,8 @@
     padding: 0.4rem 0.6rem;
   }
 
-  .btn-tema {
-    padding: 0.4rem 0.45rem;
+  app-tema-toggle {
+    --tema-toggle-padding: 0.4rem 0.45rem;
   }
 }
 
@@ -213,7 +200,7 @@
     padding: 0.5rem 0.3rem;
   }
 
-  .btn-tema {
-    padding: 0.4rem 0.3rem;
+  app-tema-toggle {
+    --tema-toggle-padding: 0.4rem 0.3rem;
   }
 }
